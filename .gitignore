@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.pytest_cache/
+
+# Calisma ciktilari (klasor yapisi korunur, icerik versiyonlanmaz)
+workdir/Gelen_PDF/*
+workdir/Islenen/*
+workdir/Hata/*
+workdir/Birlesik_PDF/*
+!workdir/**/.gitkeep

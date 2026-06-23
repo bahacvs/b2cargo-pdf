@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "perfetti-splitter"
+version = "0.1.0"
+description = "Perfetti Van Melle e-irsaliye PDF'lerini sevk adresine gore bolgelere ayirip birlestiren lokal agent (MVP)"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "pdfplumber>=0.10",
+    "pypdf>=4.0",
+    "PyYAML>=6.0",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=7.0", "reportlab>=4.0"]
+
+[project.scripts]
+perfetti-splitter = "perfetti_splitter.cli:main"
+
+[tool.setuptools]
+packages = ["perfetti_splitter"]
+
+[tool.setuptools.package-data]
+perfetti_splitter = ["../config/*.yaml"]

@@ -1,0 +1,110 @@
+# Perfetti Van Melle - B2Cargo bolge haritasi
+# Bolge -> il / ilce listesi. Tek dogruluk kaynagi budur; kod icine gomulmez.
+#
+# NOT (kalibrasyon): Bu liste proje spec'inden alinmistir. Yarinki resmi
+# B2Cargo bolge haritasiyla dogrulanmalidir. Sadece bu dosyayi guncellemek
+# yeterlidir; kod degismez.
+#
+# UYARI - Bilecik su an HEM Ankara HEM Aytop listesinde. Bu bilincli birakildi:
+# bir sehir birden cok bolgeye eslesirse agent "tahmin yapmaz" ve belgeyi
+# Hata'ya gonderir. Resmi harita gelince Bilecik'i tek bolgede birakin.
+
+Adana:
+  - Adana
+  - Mersin
+  - Hatay
+  - Osmaniye
+  - Kahramanmaraş
+  - Gaziantep
+  - Kilis
+  - Adıyaman
+  - Şanlıurfa
+  - Malatya
+
+Ankara:
+  - Ankara
+  - Çankırı
+  - Kırıkkale
+  - Kırşehir
+  - Yozgat
+  - Çorum
+  - Nevşehir
+  - Aksaray
+  - Konya
+  - Karaman
+  - Niğde
+  - Kayseri
+  - Bilecik        # ÇAKIŞMA: ayrıca Aytop'ta da var
+  - Sivas
+
+Antalya:
+  - Antalya
+  - Isparta
+  - Burdur
+  - Alanya         # ilçe (Antalya)
+
+Aytop:
+  - İstanbul
+  - Tekirdağ
+  - Edirne
+  - Kırklareli
+  - Kocaeli
+  - Sakarya
+  - Yalova
+  - Bursa
+  - Balıkesir
+  - Çanakkale
+  - Bilecik        # ÇAKIŞMA: ayrıca Ankara'da da var
+  - Zonguldak
+  - Düzce
+  - Bolu
+  - Karabük
+  - Bartın
+  - Eskişehir
+  - Afyonkarahisar
+  - Kütahya
+
+Diyarbakir:
+  - Diyarbakır
+  - Batman
+  - Mardin
+  - Siirt
+  - Şırnak
+  - Bitlis
+  - Muş
+  - Bingöl
+  - Elazığ
+  - Tunceli
+  - Hakkâri
+
+Erzurum:
+  - Erzurum
+  - Erzincan
+  - Kars
+  - Ardahan
+  - Iğdır
+  - Ağrı
+  - Van
+
+Izmir:
+  - İzmir
+  - Manisa
+  - Aydın
+  - Muğla
+  - Denizli
+  - Uşak
+  - Fethiye        # ilçe (Muğla)
+
+Samsun:
+  - Samsun
+  - Ordu
+  - Giresun
+  - Trabzon
+  - Rize
+  - Artvin
+  - Gümüşhane
+  - Bayburt
+  - Tokat
+  - Amasya
+  - Sinop
+  - Kastamonu

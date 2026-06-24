@@ -44,7 +44,7 @@ jobs:
           pyinstaller --onefile --windowed
           --name PerfettiVardiyaAyirma
           --add-data "config/regions.yaml;config"
-          perfetti_splitter/gui.py
+          launch_gui.py
 
       - name: Dagitim klasoru hazirla
         shell: pwsh

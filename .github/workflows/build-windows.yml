@@ -10,6 +10,10 @@ on:
     tags:
       - "v*"
 
+# Release adimi (action-gh-release) icin yazma izni
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: windows-latest

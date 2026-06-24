@@ -19,6 +19,14 @@ if TYPE_CHECKING:
 _INVALID_CHARS = re.compile(r'[\\/:*?"<>|\r\n\t]+')
 _MAX_STEM = 100
 
+# Toplam koli >= bu deger -> Palet; alti -> Dokme.
+PALET_MIN_KOLI = 9
+
+
+def koli_bucket(koli: int) -> str:
+    """Koli adedine gore alt klasor adi: 'Palet' (>=9) veya 'Dökme' (<=8)."""
+    return "Palet" if koli >= PALET_MIN_KOLI else "Dökme"
+
 
 def safe_filename(name: str) -> str:
     """Bir metni Windows-guvenli dosya adi kokune cevirir (uzantisiz)."""

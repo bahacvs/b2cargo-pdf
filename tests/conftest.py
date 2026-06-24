@@ -30,6 +30,7 @@ def make_irsaliye_pdf(
     recipient: str | None = None,
     addr_tail: str | None = None,
     vergi_dairesi: str = "BESIKTAS",
+    koli: int | None = 10,
     pages: int = 1,
     include_sevk: bool = True,
 ) -> Path:
@@ -66,6 +67,8 @@ def make_irsaliye_pdf(
             ]
         if belge_no:
             lines.append(f"Belge No : {belge_no}")
+        if koli is not None:
+            lines.append(f"Toplam Miktar: 100 - Toplam Koli: {koli}")
         lines += [
             "FATURA ADRESI",
             "A101 YENI MAGAZACILIK A.S.",

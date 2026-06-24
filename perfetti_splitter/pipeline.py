@@ -16,7 +16,7 @@ from . import report
 from .extractor import extract_text
 from .parser import Document, parse_document
 from .regions import LocationMatcher, RegionMap
-from .splitter import copy_docs, write_region_folders
+from .splitter import copy_docs, koli_bucket
 
 
 @dataclass
@@ -84,22 +84,32 @@ def run(
     paths = _list_pdfs(input_dir)
     documents = process_documents(paths, region_map)
 
-    # DSV once: teslimat yeri DSV listesindeyse DSV'ye; degilse B2 bolgesine.
+    # DSV once: teslimat yeri DSV listesindeyse DSV'ye (duz); degilse B2'de
+    # bolge + koli kovasina (Palet/Dökme). Koli okunamayan B2 evraki Hata'ya.
     dsv_docs: list[Document] = []
-    grouped: dict[str, list[Document]] = defaultdict(list)
+    # bolge -> kova (Palet/Dökme) -> belgeler
+    grouped: dict[str, dict[str, list[Document]]] = defaultdict(
+        lambda: defaultdict(list)
+    )
     error_docs: list[Document] = []
     for doc in documents:
         if dsv_matcher is not None and dsv_matcher.matches(doc.address):
             dsv_docs.append(doc)
         elif doc.region:
-            grouped[doc.region].append(doc)
+            if doc.koli is None:
+                doc.errors.append("koli adedi okunamadı")
+                error_docs.append(doc)
+            else:
+                grouped[doc.region][koli_bucket(doc.koli)].append(doc)
         else:
             error_docs.append(doc)
 
     written: dict[str, list[str]] = {}
-    # B2: her bolge icin alt klasor.
-    for region, files in write_region_folders(grouped, out_dir / "B2").items():
-        written[f"B2/{region}"] = files
+    # B2: her bolge -> Palet/Dökme alt klasorleri.
+    for region, buckets in grouped.items():
+        for bucket, docs in buckets.items():
+            files = copy_docs(docs, out_dir / "B2" / region / bucket)
+            written[f"B2/{region}/{bucket}"] = files
     # DSV: duz tek klasor.
     if dsv_docs:
         written["DSV"] = copy_docs(dsv_docs, out_dir / "DSV")
@@ -111,7 +121,9 @@ def run(
         report.write_error_report(error_docs, hata_dir / "Hata_raporu.csv")
 
     # Raporlar.
-    region_counts = {r: len(d) for r, d in grouped.items()}
+    region_counts = {
+        r: sum(len(d) for d in buckets.values()) for r, buckets in grouped.items()
+    }
     summary = report.format_summary(region_counts, len(error_docs), len(dsv_docs))
     report.write_summary(summary, out_dir / "ozet.txt")
 

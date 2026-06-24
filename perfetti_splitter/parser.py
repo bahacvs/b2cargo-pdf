@@ -31,6 +31,8 @@ from .regions import normalize
 PVS_RE = re.compile(r"PVS\d{4}\S*", re.IGNORECASE)
 # Belge numarasi, orn: 0700468911
 BELGE_RE = re.compile(r"0700\d+")
+# Toplam koli adedi, orn: "Toplam Koli: 24"
+KOLI_RE = re.compile(r"Toplam\s*Koli\s*:?\s*(\d+)", re.IGNORECASE)
 # Adres bloklarinin etiketleri.
 SEVK_LABEL_RE = re.compile(r"SEVK\s*ADRES[İI]", re.IGNORECASE)
 FATURA_LABEL_RE = re.compile(r"FATURA\s*ADRES[İI]", re.IGNORECASE)
@@ -60,6 +62,7 @@ class Document:
     belge_no: Optional[str] = None
     address: Optional[str] = None
     recipient: Optional[str] = None
+    koli: Optional[int] = None
     region: Optional[str] = None
     errors: list[str] = field(default_factory=list)
 
@@ -142,6 +145,12 @@ def extract_recipient(text: str) -> Optional[str]:
     return name or None
 
 
+def extract_koli(text: str) -> Optional[int]:
+    """'Toplam Koli: N' degerini tamsayi olarak dondurur; bulunamazsa None."""
+    m = KOLI_RE.search(text)
+    return int(m.group(1)) if m else None
+
+
 def parse_document(path: str, text: str) -> Document:
     """Metinden bir Document olusturur; zorunlu alan eksikse hata ekler."""
     doc = Document(path=path, text=text)
@@ -165,5 +174,6 @@ def parse_document(path: str, text: str) -> Document:
         doc.errors.append("adres okunamadı")
 
     doc.recipient = extract_recipient(text)
+    doc.koli = extract_koli(text)
 
     return doc

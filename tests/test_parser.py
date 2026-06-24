@@ -3,6 +3,7 @@
 from perfetti_splitter.extractor import extract_text
 from perfetti_splitter.parser import (
     extract_destination,
+    extract_koli,
     extract_recipient,
     parse_document,
 )
@@ -124,6 +125,18 @@ def test_extract_recipient_dedups_doubled_name():
 
 def test_extract_recipient_none_without_sevk():
     assert extract_recipient("hicbir sevk blogu yok") is None
+
+
+def test_extract_koli():
+    assert extract_koli("Toplam Miktar: 170 - Toplam Koli: 24") == 24
+    assert extract_koli("Toplam Koli: 9") == 9
+    assert extract_koli("koli bilgisi yok") is None
+
+
+def test_parse_document_sets_koli(tmp_path, make_pdf):
+    pdf = make_pdf(tmp_path / "k.pdf", il="ADANA", koli=15)
+    doc = parse_document(str(pdf), extract_text(str(pdf)))
+    assert doc.koli == 15
 
 
 def test_extract_destination_excludes_sender_and_billing():

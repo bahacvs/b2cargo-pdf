@@ -11,9 +11,17 @@ from perfetti_splitter.regions import LocationMatcher, RegionMap
 from perfetti_splitter.splitter import (
     copy_docs,
     doc_filename,
+    koli_bucket,
     safe_filename,
     write_region_folders,
 )
+
+
+def test_koli_bucket():
+    assert koli_bucket(9) == "Palet"
+    assert koli_bucket(24) == "Palet"
+    assert koli_bucket(8) == "Dökme"
+    assert koli_bucket(1) == "Dökme"
 
 
 def test_location_matcher():
@@ -81,11 +89,13 @@ def test_write_region_folders_creates_subfolders(tmp_path, make_pdf):
 def test_end_to_end_pipeline(tmp_path, make_pdf):
     gelen = tmp_path / "Gelen"
     gelen.mkdir()
-    # 2 Adana, 1 Ankara, 1 DSV (Istanbul), 1 bilinmeyen (Hata), 1 cakisma (Hata).
-    make_pdf(gelen / "a1.pdf", il="ADANA", pvs="PVS0001")
-    make_pdf(gelen / "a2.pdf", il="MERSIN", pvs="PVS0002")
-    make_pdf(gelen / "ank.pdf", il="ANKARA", pvs="PVS0003")
-    make_pdf(gelen / "ist.pdf", il="ISTANBUL", pvs="PVS0006")  # -> DSV
+    # Adana Palet (koli 24) + Adana Dokme (koli 5), Ankara Palet, DSV (Istanbul),
+    # koli okunamayan (Hata), bilinmeyen (Hata), Bilecik cakismasi (Hata).
+    make_pdf(gelen / "a1.pdf", il="ADANA", pvs="PVS0001", koli=24)
+    make_pdf(gelen / "a2.pdf", il="MERSIN", pvs="PVS0002", koli=5)
+    make_pdf(gelen / "ank.pdf", il="ANKARA", pvs="PVS0003", koli=9)
+    make_pdf(gelen / "ist.pdf", il="ISTANBUL", pvs="PVS0006", koli=12)  # -> DSV
+    make_pdf(gelen / "nokoli.pdf", il="ADANA", pvs="PVS0007", koli=None)  # -> Hata
     make_pdf(gelen / "unknown.pdf", il="ATLANTIS", pvs="PVS0004")
     make_pdf(gelen / "conflict.pdf", il="BILECIK", pvs="PVS0005")
 
@@ -102,21 +112,21 @@ def test_end_to_end_pipeline(tmp_path, make_pdf):
         shift_name="TestVardiya", dsv_matcher=dsv,
     )
 
-    assert result.region_counts.get("Adana") == 2
+    assert result.region_counts.get("Adana") == 2  # palet + dokme
     assert result.region_counts.get("Ankara") == 1
     assert result.dsv_count == 1
-    assert result.error_count == 2  # unknown + bilecik cakismasi
+    assert result.error_count == 3  # nokoli + unknown + bilecik cakismasi
 
     out_dir = Path(result.out_dir)
-    # B2 bolge klasorleri
-    assert len(list((out_dir / "B2" / "Adana").glob("*.pdf"))) == 2
-    assert (out_dir / "B2" / "Ankara" / "A101 ANKARA - PVS0003.pdf").exists()
-    # DSV duz klasor
-    assert (out_dir / "DSV").is_dir()
+    # B2 bolge -> Palet/Dökme alt klasorleri
+    assert (out_dir / "B2" / "Adana" / "Palet" / "A101 ADANA - PVS0001.pdf").exists()
+    assert (out_dir / "B2" / "Adana" / "Dökme" / "A101 MERSIN - PVS0002.pdf").exists()
+    assert (out_dir / "B2" / "Ankara" / "Palet" / "A101 ANKARA - PVS0003.pdf").exists()
+    # DSV duz (palet/dokme yok)
     assert (out_dir / "DSV" / "A101 ISTANBUL - PVS0006.pdf").exists()
-    assert not (out_dir / "B2" / "Aytop").exists()  # Istanbul B2'ye gitmedi
-    # Hata klasoru + rapor
-    assert len(list((out_dir / "Hata").glob("*.pdf"))) == 2
+    assert not (out_dir / "DSV" / "Palet").exists()
+    # Hata: koli okunamayan dahil 3 evrak
+    assert len(list((out_dir / "Hata").glob("*.pdf"))) == 3
     assert (out_dir / "Hata" / "Hata_raporu.csv").exists()
     assert (out_dir / "ozet.txt").exists()
 

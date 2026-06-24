@@ -17,7 +17,7 @@ import threading
 from pathlib import Path
 
 from .pipeline import PipelineResult, run
-from .regions import RegionMap
+from .regions import LocationMatcher, RegionMap
 
 
 # --- Tk'dan bagimsiz yardimcilar (test edilebilir) -------------------------
@@ -51,6 +51,14 @@ def config_path() -> Path:
     return resource_dir() / "config" / "regions.yaml"
 
 
+def dsv_path() -> Path:
+    """DSV lokasyon listesi YAML yolu (exe/repo yani; yoksa pakete gomulu)."""
+    external = base_dir() / "config" / "dsv_lokasyonlar.yaml"
+    if external.exists():
+        return external
+    return resource_dir() / "config" / "dsv_lokasyonlar.yaml"
+
+
 def default_input_dir() -> Path:
     return base_dir() / "Gelen_PDF"
 
@@ -60,9 +68,13 @@ def default_output_dir() -> Path:
 
 
 def run_split(input_dir: str | Path, shift_name: str | None = None) -> PipelineResult:
-    """Bolge haritasini yukleyip pipeline'i calistirir (GUI ve test ortak yolu)."""
+    """Bolge haritasi + DSV listesini yukleyip pipeline'i calistirir."""
     region_map = RegionMap.from_yaml(str(config_path()))
-    return run(input_dir, default_output_dir(), region_map, shift_name=shift_name)
+    dsv = LocationMatcher.from_yaml(str(dsv_path())) if dsv_path().exists() else None
+    return run(
+        input_dir, default_output_dir(), region_map,
+        shift_name=shift_name, dsv_matcher=dsv,
+    )
 
 
 def open_in_explorer(path: str | Path) -> None:

@@ -1,0 +1,16 @@
+# DSV tasiyici lokasyonlari.
+#
+# Bu listedeki il/ilce'ye teslimat yapilan irsaliyeler DSV klasorune; geri
+# kalan her evrak B2 altindaki uygun bolgeye yazilir.
+#
+# DSV ayrimi sehir (gerekirse ilce) bazlidir. Asagiya il VEYA ilce adi
+# yazabilirsiniz; eslestirme Turkce karakter/buyuk-kucuk farkina duyarsizdir
+# ve kelime butun olarak aranir.
+#
+# NOT: Bu liste resmi DSV teslimat listesi (Excel) ile guncellenecektir.
+# Liste exe yaninda durur; degistirmek icin programi yeniden derlemeye gerek
+# YOKTUR - bu dosyayi Not Defteri ile acip kaydetmek yeterlidir.
+
+- İstanbul
+- Bursa
+- Yalova

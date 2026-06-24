@@ -92,3 +92,32 @@ class RegionMap:
         if len(found) > 1:
             return None, "belirsiz/çakışma: " + ", ".join(sorted(found))
         return next(iter(found)), None
+
+
+class LocationMatcher:
+    """Bir lokasyon listesi (il/ilce) -> bir adres metninde gecip gecmedigi.
+
+    DSV ayrimi icin kullanilir: adreste listedeki lokasyonlardan biri kelime
+    butun olarak (Turkce-duyarsiz) geciyorsa True. Bos liste -> her zaman False.
+    """
+
+    def __init__(self, locations: list[str]):
+        self.tokens = sorted({normalize(x) for x in (locations or []) if x and normalize(x)})
+
+    @classmethod
+    def from_yaml(cls, path: str | Path) -> "LocationMatcher":
+        with open(path, encoding="utf-8") as f:
+            data = yaml.safe_load(f) or []
+        if isinstance(data, dict):  # bolge->liste bicimi de kabul edilir
+            items = [c for v in data.values() for c in (v or [])]
+        else:
+            items = list(data)
+        return cls(items)
+
+    def matches(self, address: Optional[str]) -> bool:
+        if not address or not self.tokens:
+            return False
+        ntext = normalize(address)
+        return any(
+            re.search(r"\b" + re.escape(t) + r"\b", ntext) for t in self.tokens
+        )

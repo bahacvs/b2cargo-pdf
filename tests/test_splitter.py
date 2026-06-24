@@ -7,13 +7,22 @@ from pypdf import PdfReader
 
 from perfetti_splitter.parser import Document
 from perfetti_splitter.pipeline import run
-from perfetti_splitter.regions import RegionMap
+from perfetti_splitter.regions import LocationMatcher, RegionMap
 from perfetti_splitter.splitter import (
     copy_docs,
     doc_filename,
     safe_filename,
     write_region_folders,
 )
+
+
+def test_location_matcher():
+    m = LocationMatcher(["İstanbul", "Bursa", "Yalova"])
+    assert m.matches("A101 ISTANBUL Adres: ... Esenyurt/ISTANBUL/Turkiye")
+    assert m.matches("... Nilufer/BURSA/Turkiye")
+    assert not m.matches("A101 ADANA Adres: Merkez/ADANA/Turkiye")
+    assert not m.matches(None)
+    assert not LocationMatcher([]).matches("ISTANBUL")  # bos liste -> False
 
 
 @pytest.fixture
@@ -72,10 +81,11 @@ def test_write_region_folders_creates_subfolders(tmp_path, make_pdf):
 def test_end_to_end_pipeline(tmp_path, make_pdf):
     gelen = tmp_path / "Gelen"
     gelen.mkdir()
-    # 2 Adana, 1 Ankara, 1 bilinmeyen (Hata), 1 Bilecik cakismasi (Hata).
+    # 2 Adana, 1 Ankara, 1 DSV (Istanbul), 1 bilinmeyen (Hata), 1 cakisma (Hata).
     make_pdf(gelen / "a1.pdf", il="ADANA", pvs="PVS0001")
     make_pdf(gelen / "a2.pdf", il="MERSIN", pvs="PVS0002")
     make_pdf(gelen / "ank.pdf", il="ANKARA", pvs="PVS0003")
+    make_pdf(gelen / "ist.pdf", il="ISTANBUL", pvs="PVS0006")  # -> DSV
     make_pdf(gelen / "unknown.pdf", il="ATLANTIS", pvs="PVS0004")
     make_pdf(gelen / "conflict.pdf", il="BILECIK", pvs="PVS0005")
 
@@ -86,19 +96,26 @@ def test_end_to_end_pipeline(tmp_path, make_pdf):
             "Aytop": ["İstanbul", "Bilecik"],
         }
     )
-    result = run(gelen, tmp_path / "out", region_map, shift_name="TestVardiya")
+    dsv = LocationMatcher(["İstanbul", "Bursa", "Yalova"])
+    result = run(
+        gelen, tmp_path / "out", region_map,
+        shift_name="TestVardiya", dsv_matcher=dsv,
+    )
 
     assert result.region_counts.get("Adana") == 2
     assert result.region_counts.get("Ankara") == 1
+    assert result.dsv_count == 1
     assert result.error_count == 2  # unknown + bilecik cakismasi
 
     out_dir = Path(result.out_dir)
-    # Bolge KLASORLERI ve icindeki dosyalar
-    assert (out_dir / "Adana").is_dir()
-    assert len(list((out_dir / "Adana").glob("*.pdf"))) == 2
-    assert (out_dir / "Ankara" / "A101 ANKARA - PVS0003.pdf").exists()
+    # B2 bolge klasorleri
+    assert len(list((out_dir / "B2" / "Adana").glob("*.pdf"))) == 2
+    assert (out_dir / "B2" / "Ankara" / "A101 ANKARA - PVS0003.pdf").exists()
+    # DSV duz klasor
+    assert (out_dir / "DSV").is_dir()
+    assert (out_dir / "DSV" / "A101 ISTANBUL - PVS0006.pdf").exists()
+    assert not (out_dir / "B2" / "Aytop").exists()  # Istanbul B2'ye gitmedi
     # Hata klasoru + rapor
-    assert (out_dir / "Hata").is_dir()
     assert len(list((out_dir / "Hata").glob("*.pdf"))) == 2
     assert (out_dir / "Hata" / "Hata_raporu.csv").exists()
     assert (out_dir / "ozet.txt").exists()

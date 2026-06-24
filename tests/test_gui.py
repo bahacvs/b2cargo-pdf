@@ -42,8 +42,8 @@ def test_run_split_end_to_end(monkeypatch, tmp_path, make_pdf):
     assert result.region_counts.get("Ankara") == 1
     assert result.error_count == 0
     out_dir = Path(result.out_dir)
-    # Bolge KLASORLERI + icinde ayri PDF'ler
-    assert (out_dir / "Adana").is_dir()
-    assert len(list((out_dir / "Adana").glob("*.pdf"))) == 2
-    assert (out_dir / "Ankara").is_dir()
-    assert len(list((out_dir / "Ankara").glob("*.pdf"))) == 1
+    # B2 altinda bolge KLASORLERI + icinde ayri PDF'ler
+    assert (out_dir / "B2" / "Adana").is_dir()
+    assert len(list((out_dir / "B2" / "Adana").glob("*.pdf"))) == 2
+    assert (out_dir / "B2" / "Ankara").is_dir()
+    assert len(list((out_dir / "B2" / "Ankara").glob("*.pdf"))) == 1

@@ -15,7 +15,7 @@ from typing import Optional
 from . import report
 from .extractor import extract_text
 from .parser import Document, parse_document
-from .regions import RegionMap
+from .regions import LocationMatcher, RegionMap
 from .splitter import copy_docs, write_region_folders
 
 
@@ -25,6 +25,7 @@ class PipelineResult:
     out_dir: str
     documents: list[Document] = field(default_factory=list)
     region_counts: dict[str, int] = field(default_factory=dict)
+    dsv_count: int = 0
     error_count: int = 0
     written_files: dict[str, list[str]] = field(default_factory=dict)
     summary: str = ""
@@ -62,8 +63,15 @@ def run(
     out_base: str | Path,
     region_map: RegionMap,
     shift_name: Optional[str] = None,
+    dsv_matcher: Optional[LocationMatcher] = None,
 ) -> PipelineResult:
-    """Pipeline'i bastan sona calistirir ve sonuc dondurur."""
+    """Pipeline'i bastan sona calistirir ve sonuc dondurur.
+
+    Cikti iki ana klasore ayrilir:
+      * DSV/  -> teslimat yeri DSV lokasyon listesinde olan evraklar (duz).
+      * B2/<bolge>/ -> geri kalan her evrak, B2 bolgesine gore.
+    Bolgesi/adresi okunamayan evraklar <vardiya>/Hata/ altina gider.
+    """
     input_dir = Path(input_dir)
     if not input_dir.is_dir():
         raise NotADirectoryError(f"Gelen klasor bulunamadı: {input_dir}")
@@ -76,17 +84,25 @@ def run(
     paths = _list_pdfs(input_dir)
     documents = process_documents(paths, region_map)
 
-    # Bolgeye gore grupla; hatali olanlari ayir.
+    # DSV once: teslimat yeri DSV listesindeyse DSV'ye; degilse B2 bolgesine.
+    dsv_docs: list[Document] = []
     grouped: dict[str, list[Document]] = defaultdict(list)
     error_docs: list[Document] = []
     for doc in documents:
-        if doc.region:
+        if dsv_matcher is not None and dsv_matcher.matches(doc.address):
+            dsv_docs.append(doc)
+        elif doc.region:
             grouped[doc.region].append(doc)
         else:
             error_docs.append(doc)
 
-    # Her bolge icin bir klasor, icine ayri PDF'ler.
-    written = write_region_folders(grouped, out_dir)
+    written: dict[str, list[str]] = {}
+    # B2: her bolge icin alt klasor.
+    for region, files in write_region_folders(grouped, out_dir / "B2").items():
+        written[f"B2/{region}"] = files
+    # DSV: duz tek klasor.
+    if dsv_docs:
+        written["DSV"] = copy_docs(dsv_docs, out_dir / "DSV")
 
     # Hata klasoru: basarisiz PDF'ler ayri ayri + neden raporu icinde.
     if error_docs:
@@ -96,7 +112,7 @@ def run(
 
     # Raporlar.
     region_counts = {r: len(d) for r, d in grouped.items()}
-    summary = report.format_summary(region_counts, len(error_docs))
+    summary = report.format_summary(region_counts, len(error_docs), len(dsv_docs))
     report.write_summary(summary, out_dir / "ozet.txt")
 
     return PipelineResult(
@@ -104,6 +120,7 @@ def run(
         out_dir=str(out_dir),
         documents=documents,
         region_counts=region_counts,
+        dsv_count=len(dsv_docs),
         error_count=len(error_docs),
         written_files=written,
         summary=summary,

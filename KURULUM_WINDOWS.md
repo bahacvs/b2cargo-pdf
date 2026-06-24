@@ -94,20 +94,29 @@ Vardiya irsaliye PDF'lerinin **hepsini** şu klasöre kopyalayın:
 
 ```
 <program klasörü>\workdir\Birlesik_PDF\<vardiya>\
-├── Adana\                ← bölge klasörü
-│   ├── A101 ADANA - PVS2026000029867.pdf
-│   └── GRATIS - ADANA DEPO - PVS2026000030031.pdf
-├── Ankara\
-│   └── A101 KAYSERI - PVS2026000029873.pdf
-├── ...
+├── DSV\                  ← teslimat yeri DSV listesindeki evraklar (düz)
+│   ├── A101 ISTANBUL - PVS....pdf
+│   └── ...
+├── B2\                   ← geri kalan evraklar, bölgelere ayrılmış
+│   ├── Adana\
+│   │   ├── A101 ADANA - PVS2026000029867.pdf
+│   │   └── GRATIS - ADANA DEPO - PVS2026000030031.pdf
+│   ├── Ankara\
+│   │   └── A101 KAYSERI - PVS2026000029873.pdf
+│   └── ...
 ├── Hata\                 ← bölgesi belirlenemeyen / eksik bilgili evraklar
 │   ├── <sorunlu PDF'ler>
 │   └── Hata_raporu.csv   ← her hatalı dosya + nedeni + okunan adres
 └── ozet.txt              ← vardiya özeti
 ```
 
-> **Çıktı:** Her bölge artık ayrı bir **klasör**; içinde irsaliyeler `{Alıcı} - {PVS}.pdf`
-> adıyla ayrı ayrı durur (tek birleşik PDF yok).
+> **İki ana klasör:** **DSV** = teslimat yeri DSV listesindeki evraklar (düz tek
+> klasör); **B2** = kalan her evrak, bölgelere ayrılmış. İrsaliyeler
+> `{Alıcı} - {PVS}.pdf` adıyla ayrı ayrı durur (tek birleşik PDF yok).
+>
+> **DSV listesi:** `config\dsv_lokasyonlar.yaml` dosyasına DSV'nin teslimat
+> yaptığı il/ilçe adlarını yazın (her satıra bir tane). Programı yeniden
+> derlemeye gerek yoktur.
 >
 > **Hata klasörü:** Bölgesi bulunamayan evraklar buraya gelir; `Hata_raporu.csv`
 > her birinin nedenini ve okunan adresi gösterir. Eksik bir şehir varsa

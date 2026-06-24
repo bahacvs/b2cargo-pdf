@@ -37,6 +37,7 @@ jobs:
           pyinstaller --onefile --windowed
           --name PerfettiVardiyaAyirma
           --add-data "config/regions.yaml;config"
+          --add-data "config/dsv_lokasyonlar.yaml;config"
           launch_gui.py
 
       - name: Dagitim klasoru hazirla
@@ -47,6 +48,7 @@ jobs:
           New-Item -ItemType Directory -Force -Path "$dist/Gelen_PDF" | Out-Null
           Copy-Item "dist/PerfettiVardiyaAyirma.exe" "$dist/" -Force
           Copy-Item "config/regions.yaml" "$dist/config/" -Force
+          Copy-Item "config/dsv_lokasyonlar.yaml" "$dist/config/" -Force
           New-Item -ItemType File -Force -Path "$dist/Gelen_PDF/.gitkeep" | Out-Null
           @"
           PERFETTI VARDIYA AYIRMA - KULLANIM
@@ -55,9 +57,15 @@ jobs:
           2) 'PerfettiVardiyaAyirma.exe' dosyasina cift tiklayin.
           3) Pencerede 'AYIR' butonuna basin.
 
-          CIKTI: 'Birlesik_PDF' altinda her bolge icin bir KLASOR olusur; icinde
-          irsaliyeler '{Alici} - {PVS}.pdf' adiyla ayri ayri durur. Pencereden
+          CIKTI: 'Birlesik_PDF/<vardiya>' altinda iki ana klasor olusur:
+            - DSV : teslimat yeri DSV listesindeki evraklar (duz, tek klasor).
+            - B2  : geri kalan evraklar, B2 bolgelerine ayrilmis (Adana, Ankara...).
+          Irsaliyeler '{Alici} - {PVS}.pdf' adiyla ayri ayri durur. Pencereden
           'Cikti Klasorunu Ac' ile acabilirsiniz.
+
+          DSV LISTESI: 'config\dsv_lokasyonlar.yaml' dosyasina DSV'nin teslimat
+          yaptigi il/ilce adlarini yazin (her satira bir tane). Programi yeniden
+          derlemeye gerek yoktur.
 
           HATA: Bolgesi bulunamayan evraklar 'Hata' klasorune gider; icindeki
           'Hata_raporu.csv' nedeni ve okunan adresi gosterir. Eksik bir sehir

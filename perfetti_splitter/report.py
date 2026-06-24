@@ -34,14 +34,20 @@ def write_error_report(error_docs: list["Document"], out_path: str | Path) -> st
     return str(out_path)
 
 
-def format_summary(region_counts: dict[str, int], error_count: int) -> str:
-    """Insan-okur ozet metni uretir."""
+def format_summary(
+    region_counts: dict[str, int], error_count: int, dsv_count: int = 0
+) -> str:
+    """Insan-okur ozet metni uretir (B2 bolgeleri + DSV + Hata)."""
     lines = ["=== Vardiya Ozeti ==="]
     total = 0
+    lines.append("  B2:")
     for region in sorted(region_counts):
         n = region_counts[region]
         total += n
-        lines.append(f"  {region:<12} {n} evrak")
+        lines.append(f"    {region:<10} {n} evrak")
+    if dsv_count:
+        total += dsv_count
+        lines.append(f"  {'DSV':<12} {dsv_count} evrak")
     lines.append(f"  {'Hata':<12} {error_count} evrak")
     lines.append(f"  {'-' * 20}")
     lines.append(f"  {'TOPLAM':<12} {total + error_count} evrak")

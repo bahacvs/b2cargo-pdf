@@ -11,10 +11,12 @@ import sys
 from pathlib import Path
 
 from .pipeline import run
-from .regions import RegionMap
+from .regions import LocationMatcher, RegionMap
 
-# config/regions.yaml -> repo kokunden goreceli varsayilan yol
-_DEFAULT_CONFIG = Path(__file__).resolve().parent.parent / "config" / "regions.yaml"
+# config/*.yaml -> repo kokunden goreceli varsayilan yollar
+_CONFIG_DIR = Path(__file__).resolve().parent.parent / "config"
+_DEFAULT_CONFIG = _CONFIG_DIR / "regions.yaml"
+_DEFAULT_DSV = _CONFIG_DIR / "dsv_lokasyonlar.yaml"
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -38,6 +40,11 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Vardiya adi (varsayilan: gelen klasor adi)",
     )
+    parser.add_argument(
+        "--dsv",
+        default=str(_DEFAULT_DSV),
+        help="DSV lokasyon listesi YAML yolu (varsayilan: config/dsv_lokasyonlar.yaml)",
+    )
     return parser
 
 
@@ -52,12 +59,19 @@ def main(argv: list[str] | None = None) -> int:
             "       Bu sehirlerdeki belgeler Hata'ya gonderilecek (tahmin yok).\n"
         )
 
-    result = run(args.input_dir, args.outdir, region_map, shift_name=args.name)
+    dsv_matcher = (
+        LocationMatcher.from_yaml(args.dsv) if Path(args.dsv).exists() else None
+    )
+
+    result = run(
+        args.input_dir, args.outdir, region_map,
+        shift_name=args.name, dsv_matcher=dsv_matcher,
+    )
 
     print(result.summary)
     print(f"\nCikti klasoru: {result.out_dir}")
     if result.error_count:
-        print(f"Hata raporu:   {Path(result.out_dir) / 'Hata_raporu.csv'}")
+        print(f"Hata raporu:   {Path(result.out_dir) / 'Hata' / 'Hata_raporu.csv'}")
     return 0
 
 

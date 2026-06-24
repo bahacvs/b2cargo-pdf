@@ -47,12 +47,14 @@ def test_write_region_pdfs_names_by_count(tmp_path, make_pdf):
 def test_end_to_end_pipeline(tmp_path, make_pdf):
     gelen = tmp_path / "Gelen"
     gelen.mkdir()
-    # 2 Adana, 1 Ankara, 1 bilinmeyen (Hata), 1 Bilecik cakismasi (Hata)
-    make_pdf(gelen / "a1.pdf", address="MIGROS ADANA DEPO")
-    make_pdf(gelen / "a2.pdf", address="MIGROS MERSIN SUBE")
-    make_pdf(gelen / "ank.pdf", address="MIGROS ANKARA MERKEZ")
-    make_pdf(gelen / "unknown.pdf", address="MIGROS ATLANTIS DEPO")
-    make_pdf(gelen / "conflict.pdf", address="MIGROS BILECIK DEPO")
+    # 2 Adana, 1 Ankara, 1 bilinmeyen (Hata), 1 Bilecik cakismasi (Hata).
+    # Tum PDF'lerde gonderici/fatura Istanbul (Aytop) tuzagi var; dogru
+    # ayrim SEVK adresindeki il'e gore yapilmali.
+    make_pdf(gelen / "a1.pdf", il="ADANA")
+    make_pdf(gelen / "a2.pdf", il="MERSIN")
+    make_pdf(gelen / "ank.pdf", il="ANKARA")
+    make_pdf(gelen / "unknown.pdf", il="ATLANTIS")
+    make_pdf(gelen / "conflict.pdf", il="BILECIK")
 
     region_map = RegionMap(
         {

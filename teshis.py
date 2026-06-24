@@ -16,7 +16,7 @@ import glob
 from pathlib import Path
 
 from perfetti_splitter.extractor import extract_text
-from perfetti_splitter.parser import extract_address
+from perfetti_splitter.parser import extract_destination
 from perfetti_splitter.regions import RegionMap
 
 ROOT = Path(__file__).resolve().parent
@@ -44,16 +44,16 @@ def main() -> None:
         return
 
     out.append("=" * 64)
-    out.append("PROGRAMIN BULDUGU ADRES VE TESPIT ETTIGI BOLGE")
+    out.append("PROGRAMIN BULDUGU HEDEF IL VE TESPIT ETTIGI BOLGE")
     out.append("=" * 64)
     for f in files[:SUMMARY_COUNT]:
         text = extract_text(f)
-        addr = extract_address(text)
-        region, err = region_map.detect(addr)
+        dest = extract_destination(text)
+        region, err = region_map.detect(dest)
         sonuc = region if region else f"HATA: {err}"
         out.append(f"- {Path(f).name}")
-        out.append(f"    bulunan adres : {addr!r}")
-        out.append(f"    tespit        : {sonuc}")
+        out.append(f"    bulunan hedef il : {dest!r}")
+        out.append(f"    tespit           : {sonuc}")
 
     out.append("")
     out.append("#" * 64)

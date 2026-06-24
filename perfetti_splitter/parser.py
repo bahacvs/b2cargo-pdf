@@ -1,12 +1,19 @@
 """Irsaliye metninden alan cikarimi.
 
 Bir dosya = bir irsaliye oldugu icin belge sinir tespiti gerekmez. Her dosya
-icin PVS kodu, belge numarasi ve sevk adresi cikarilir. Zorunlu alanlardan
-biri okunamazsa belge `errors` ile isaretlenir ve "tahmin yapma" ilkesi geregi
-hicbir bolgeye zorlanmadan Hata ciktisina yonlendirilir.
+icin PVS kodu, belge numarasi ve SEVK (teslimat) adresi cikarilir. Zorunlu
+alanlardan biri okunamazsa belge `errors` ile isaretlenir ve "tahmin yapma"
+ilkesi geregi hicbir bolgeye zorlanmadan Hata ciktisina yonlendirilir.
 
-Regex desenleri ve adres etiketleri gercek vardiya PDF'i ile kalibre edilmek
-uzere burada toplanmistir (PATTERNS / ADDRESS_LABELS).
+Adres tespiti (gercek e-Irsaliye yapisina gore kalibre edildi):
+Bir belgede UC adres bulunur:
+  1. Ust kisim   : PERFETTI VAN MELLE'nin kendi adresi  (... Esenyurt/Istanbul)
+  2. SEVK ADRESI : asil teslimat adresi  (... Ilce/Il/Turkiye)   <-- KULLANILAN
+  3. FATURA ADRESI: fatura adresi          (... Il/TR)
+Yalnizca SEVK ADRESI altindaki "Adres:" blogu kullanilir. Buradaki hedef il,
+"Ilce/Il/Turkiye" kalibiyla okunur. (Fatura adresi /TR ile bittigi icin bu
+kalibla karismaz; gonderici adresi ise SEVK ADRESI'nden once oldugu icin
+blok disinda kalir.)
 """
 
 from __future__ import annotations
@@ -16,14 +23,16 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 # --- Kalibre edilebilir desenler -------------------------------------------
-# PVS kodu, orn: PVS2026000123
+# PVS kodu, orn: PVS2026000029860
 PVS_RE = re.compile(r"PVS\d{4}\S*", re.IGNORECASE)
-# Belge numarasi, orn: 0700000456
+# Belge numarasi, orn: 0700468911
 BELGE_RE = re.compile(r"0700\d+")
-# Sevk adresinin onundeki etiketler (normalize edilerek aranir).
-ADDRESS_LABELS = ["SEVK ADRESI", "SEVK ADRES", "TESLIMAT ADRESI", "SEVK", "ADRES"]
-# Etiket bulunduktan sonra adres olarak alinacak ek satir sayisi.
-ADDRESS_EXTRA_LINES = 2
+# Adres bloklarinin etiketleri.
+SEVK_LABEL_RE = re.compile(r"SEVK\s*ADRES[İI]", re.IGNORECASE)
+FATURA_LABEL_RE = re.compile(r"FATURA\s*ADRES[İI]", re.IGNORECASE)
+# Hedef adresin sonundaki  Ilce/Il/Turkiye  kalibi -> il = son slash'tan onceki.
+# (Fatura adresi /TR ile bittiginden bu kalibla eslesmez.)
+DEST_PROVINCE_RE = re.compile(r"([^/\n]+)/\s*t[uü]rk[iİ]ye", re.IGNORECASE)
 
 
 @dataclass
@@ -43,30 +52,30 @@ class Document:
         return not self.errors
 
 
-def _fold(s: str) -> str:
-    """Etiket karsilastirmasi icin Turkce-duyarsiz sade kucuk harf."""
-    from .regions import normalize
+def sevk_block(text: str) -> Optional[str]:
+    """SEVK ADRESI ile FATURA ADRESI arasindaki metin blogu; yoksa None."""
+    m = SEVK_LABEL_RE.search(text)
+    if not m:
+        return None
+    fatura = FATURA_LABEL_RE.search(text, m.end())
+    end = fatura.start() if fatura else len(text)
+    return text[m.end():end]
 
-    return normalize(s)
 
+def extract_destination(text: str) -> Optional[str]:
+    """SEVK adresindeki hedef il'i dondurur (orn. 'TRABZON'); bulunamazsa None.
 
-def extract_address(text: str, labels: list[str] | None = None) -> Optional[str]:
-    """Etiketli sevk adresi blogunu dondurur; bulunamazsa None."""
-    labels = labels if labels is not None else ADDRESS_LABELS
-    folded_labels = [_fold(lbl) for lbl in labels]
-    lines = [ln.strip() for ln in text.splitlines()]
-    for i, line in enumerate(lines):
-        fline = _fold(line)
-        for raw_label, flabel in zip(labels, folded_labels):
-            pos = fline.find(flabel)
-            if pos == -1:
-                continue
-            # Etiketten sonra ayni satirda kalan kisim + sonraki satirlar.
-            rest = line[pos + len(raw_label):].lstrip(" :\t-")
-            block = [rest] + lines[i + 1 : i + 1 + ADDRESS_EXTRA_LINES]
-            address = " ".join(p for p in block if p).strip()
-            return address or None
-    return None
+    Once SEVK blogundaki 'Ilce/Il/Turkiye' kalibi denenir. Kalip yoksa,
+    sehir taramasi yapilabilsin diye SEVK blogunun ham metni dondurulur.
+    """
+    block = sevk_block(text)
+    if block is None:
+        return None
+    m = DEST_PROVINCE_RE.search(block)
+    if m:
+        return m.group(1).strip()
+    cleaned = block.strip()
+    return cleaned or None
 
 
 def parse_document(path: str, text: str) -> Document:
@@ -87,7 +96,7 @@ def parse_document(path: str, text: str) -> Document:
     if not doc.belge_no:
         doc.errors.append("belge numarası bulunamadı")
 
-    doc.address = extract_address(text)
+    doc.address = extract_destination(text)
     if not doc.address:
         doc.errors.append("adres okunamadı")
 

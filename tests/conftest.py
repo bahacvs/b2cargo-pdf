@@ -1,7 +1,15 @@
-"""Test yardimcilari: sentetik irsaliye PDF'leri uretir (reportlab).
+"""Test yardimcilari: gercek e-Irsaliye yapisini taklit eden sentetik PDF'ler.
 
-Gercek vardiya PDF'i henuz olmadigi icin testler kontrollu sentetik PDF'lerle
-calisir. Gercek PDF gelince ayni testler gercek ornek uzerinde kalibre edilir.
+Gercek PDF'te UC adres bulunur ve sadece SEVK ADRESI kullanilmalidir:
+  1. Gonderici (ust)   : ... Esenyurt/Istanbul   <- Aytop "tuzagi"
+  2. SEVK ADRESI       : ... Ilce/Il/Turkiye     <- DOGRU adres
+  3. FATURA ADRESI     : ... Istanbul/TR         <- Aytop "tuzagi"
+Bu fixture ayni tuzaklari icerir; boylece program yanlislikla gonderici/fatura
+adresini (Istanbul=Aytop) okursa testler kirilir.
+
+Not: reportlab standart fontu bazi Turkce harfleri (orn. İ) tasiyamadigi icin
+fixture metni ASCII'dir; gercek Turkce karakterlerin normalizasyonu test_regions
+icinde ayrica test edilir.
 """
 
 from __future__ import annotations
@@ -17,27 +25,45 @@ def make_irsaliye_pdf(
     path: Path,
     pvs: str | None = "PVS2026000123",
     belge_no: str | None = "0700000456",
-    address: str | None = "MIGROS ADANA BOLGE MERKEZ DEPOSU",
+    il: str = "ADANA",
+    ilce: str = "Merkez",
     pages: int = 1,
+    include_sevk: bool = True,
 ) -> Path:
-    """Tek bir irsaliye PDF'i (1+ sayfa) uretir."""
+    """Tek bir irsaliye PDF'i (1+ sayfa) uretir.
+
+    il: SEVK adresindeki hedef il (bolge bundan tespit edilir).
+    include_sevk=False ise SEVK blogu hic yazilmaz (adres okunamadi senaryosu).
+    """
     c = canvas.Canvas(str(path), pagesize=A4)
     width, height = A4
     for page_no in range(pages):
-        y = height - 80
-        c.setFont("Helvetica", 11)
-        c.drawString(50, y, "PERFETTI VAN MELLE - E-IRSALIYE")
-        y -= 30
-        if pvs:
-            c.drawString(50, y, f"PVS Kodu: {pvs}")
-            y -= 20
+        lines = [
+            "PERFETTI VAN MELLE GIDA SAN.VE.TIC.A.S",
+            "Adres: Osmangazi Mah. No:15 Esenyurt/Istanbul",   # gonderici (tuzak)
+            "Vergi Dairesi: Buyuk Mukellefler VKN: 7280036774",
+        ]
+        if include_sevk:
+            lines += [
+                f"SEVK ADRESI Irsaliye No: {pvs or ''}",
+                f"A101 {il}",
+                "Adres: KORU MAH. SUKRU ALBAYRAK CAD. NO:",
+                f"7 {ilce}/{il}/Turkiye",                       # DOGRU hedef
+            ]
         if belge_no:
-            c.drawString(50, y, f"Belge No: {belge_no}")
-            y -= 20
-        if address:
-            c.drawString(50, y, f"SEVK ADRESI: {address}")
-            y -= 20
-        c.drawString(50, y, f"(sayfa {page_no + 1}/{pages})")
+            lines.append(f"Belge No : {belge_no}")
+        lines += [
+            "FATURA ADRESI",
+            "A101 YENI MAGAZACILIK A.S.",
+            "Adres: Burhaniye Mah. No: 4 Istanbul/TR",          # fatura (tuzak)
+            f"(sayfa {page_no + 1}/{pages})",
+        ]
+
+        c.setFont("Helvetica", 10)
+        y = height - 60
+        for line in lines:
+            c.drawString(50, y, line)
+            y -= 18
         c.showPage()
     c.save()
     return path

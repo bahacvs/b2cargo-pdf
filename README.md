@@ -10,10 +10,18 @@ bölgesini tespit eder ve her bölge için **tek bir birleşik PDF** üretir.
 
 ## Kurulum
 
+> **İşyeri bilgisayarı (Windows) için:** Teknik bilgi gerektirmeyen, çift
+> tıklamayla kurulum rehberi → **[KURULUM_WINDOWS.md](KURULUM_WINDOWS.md)**
+> (`kur.bat` ile kur, `calistir.bat` ile çalıştır).
+
+Geliştirici kurulumu:
+
 ```bash
 cd b2cargo-pdf
 pip install -e .            # çalıştırmak için
 pip install -e ".[test]"    # testleri de çalıştırmak için
+# veya sadece runtime bağımlılıkları:
+pip install -r requirements.txt
 ```
 
 ## Kullanım

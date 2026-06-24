@@ -1,0 +1,5 @@
+# Calisma (runtime) bagimliliklari. Cevrimdisi/proxy kurulumu icin:
+#   pip install -r requirements.txt
+pdfplumber>=0.10
+pypdf>=4.0
+PyYAML>=6.0

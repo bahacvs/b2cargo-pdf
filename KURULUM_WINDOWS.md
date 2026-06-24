@@ -1,0 +1,110 @@
+# İşyeri Bilgisayarına Kurulum (Windows)
+
+Bu rehber, Perfetti vardiya irsaliyelerini bölgelere ayıran programı bir
+Windows bilgisayara kurmak içindir. **Teknik bilgi gerektirmez** — adımları
+sırayla takip edin.
+
+---
+
+## 1. Adım — Python kurun (tek seferlik)
+
+1. Tarayıcıda **https://www.python.org/downloads/** adresine gidin.
+2. Sarı **“Download Python”** butonuna tıklayın, inen dosyayı çalıştırın.
+3. ⚠️ **ÇOK ÖNEMLİ:** Açılan ilk ekranda en alttaki
+   **“Add python.exe to PATH”** kutusunu **işaretleyin**.
+4. **“Install Now”** deyin, kurulum bitince **Close** ile kapatın.
+
+> Bu adımı yalnızca bir kez yaparsınız. Bilgisayarda Python zaten kuruluysa
+> atlayabilirsiniz.
+
+---
+
+## 2. Adım — Programı indirin
+
+1. **https://github.com/bahacvs/b2cargo-pdf** adresine gidin.
+2. Sol üstteki dal (branch) menüsünden
+   **`claude/test-coverage-analysis-ngrkaq`** dalını seçin.
+3. Yeşil **`< > Code`** butonuna → **Download ZIP**.
+4. İnen ZIP dosyasına sağ tıklayın → **Tümünü ayıkla** (Extract All).
+5. Çıkan klasörü kolay bir yere taşıyın, örneğin **`C:\Perfetti`**.
+
+---
+
+## 3. Adım — Kurun (tek seferlik)
+
+Klasörün içindeki **`kur.bat`** dosyasına **çift tıklayın**.
+
+- Siyah bir pencere açılır ve gerekli parçaları indirir (internet gerekir).
+- Sonunda **“KURULUM TAMAM”** yazısını görünce bir tuşa basıp pencereyi
+  kapatın.
+
+> Windows “bilinmeyen yayıncı” uyarısı verirse: **Ek bilgi → Yine de çalıştır**.
+
+---
+
+## 4. Adım — PDF'leri yerleştirin
+
+Vardiya irsaliye PDF'lerinin **hepsini** şu klasöre kopyalayın:
+
+```
+<program klasörü>\workdir\Gelen_PDF\
+```
+
+> Her irsaliye ayrı bir PDF dosyasıdır; hepsini bu klasöre atın.
+
+---
+
+## 5. Adım — Çalıştırın
+
+**`calistir.bat`** dosyasına **çift tıklayın**.
+
+- Vardiya adı sorar — yazabilir (örn. `2026-06-24_18-00_Vardiya`) veya boş
+  bırakıp Enter'a basabilirsiniz (otomatik tarih kullanılır).
+- İşlem bitince ekranda bölge özetini görürsünüz ve **çıktı klasörü
+  otomatik açılır**:
+
+```
+<program klasörü>\workdir\Birlesik_PDF\<vardiya>\
+├── Adana_24evrak.pdf
+├── Ankara_31evrak.pdf
+├── ...
+├── Hata_3evrak.pdf       ← bölgesi belirlenemeyen / eksik bilgili evraklar
+├── Hata_raporu.csv       ← her hatalı dosya ve nedeni
+└── ozet.txt              ← vardiya özeti
+```
+
+Sonraki vardiyalarda sadece **4. ve 5. adımları** tekrarlarsınız.
+
+---
+
+## Sorun Giderme
+
+**“Python bulunamadı” hatası**
+→ 1. adımdaki **“Add python.exe to PATH”** kutusu işaretlenmemiş.
+Python'u **Denetim Masası → Programlar**'dan kaldırıp, kutuyu işaretleyerek
+yeniden kurun.
+
+**`kur.bat` “Bağımlılıklar kurulamadı” diyor**
+→ İnternet yok ya da kurumsal **proxy/güvenlik duvarı** engelliyor olabilir.
+
+- *Proxy varsa* (IT'den proxy adresini öğrenin) komut isteminde:
+  ```
+  .venv\Scripts\python.exe -m pip install --proxy http://KULLANICI:SIFRE@PROXY:PORT -r requirements.txt
+  ```
+- *İnternet tamamen kapalıysa (çevrimdışı kurulum):* internet erişimli başka
+  bir bilgisayarda program klasöründe şunu çalıştırıp paketleri toplayın:
+  ```
+  pip download -r requirements.txt -d wheelhouse
+  ```
+  `wheelhouse` klasörünü işyeri bilgisayarına kopyalayın ve orada:
+  ```
+  .venv\Scripts\python.exe -m pip install --no-index --find-links wheelhouse -r requirements.txt
+  ```
+
+**`calistir.bat` “Gelen_PDF klasöründe hiç PDF bulunamadı” diyor**
+→ 4. adımı atlamışsınız; PDF'leri `workdir\Gelen_PDF\` içine kopyalayın.
+
+**Bir bölge eksik / yanlış**
+→ Şehir–bölge eşlemesi `config\regions.yaml` dosyasındadır. Bu dosyayı Not
+Defteri ile açıp düzeltebilirsiniz (kod değişmez). Belirsiz/eksik evraklar
+güvenlik gereği tahmin edilmeden **Hata**'ya gönderilir.

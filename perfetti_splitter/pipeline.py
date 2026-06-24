@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
@@ -67,7 +68,9 @@ def run(
     if not input_dir.is_dir():
         raise NotADirectoryError(f"Gelen klasor bulunamadı: {input_dir}")
 
-    shift_name = shift_name or input_dir.name
+    # --name verilmezse zaman damgali vardiya adi (klasor adi yerine).
+    if not shift_name:
+        shift_name = "Vardiya_" + datetime.now().strftime("%Y-%m-%d_%H-%M")
     out_dir = Path(out_base) / shift_name
 
     paths = _list_pdfs(input_dir)

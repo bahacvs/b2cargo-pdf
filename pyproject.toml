@@ -16,9 +16,13 @@ dependencies = [
 
 [project.optional-dependencies]
 test = ["pytest>=7.0", "reportlab>=4.0"]
+build = ["pyinstaller>=6.0"]
 
 [project.scripts]
 perfetti-splitter = "perfetti_splitter.cli:main"
+
+[project.gui-scripts]
+perfetti-splitter-gui = "perfetti_splitter.gui:main"
 
 [tool.setuptools]
 packages = ["perfetti_splitter"]

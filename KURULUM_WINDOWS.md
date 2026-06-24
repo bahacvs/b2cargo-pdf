@@ -6,6 +6,35 @@ sırayla takip edin.
 
 ---
 
+## ⭐ En Kolay Yol — Hazır program (.exe) (önerilen)
+
+Bu yolda **Python kurmanıza gerek yoktur**, tek bir program dosyası indirip
+çalıştırırsınız.
+
+1. **https://github.com/bahacvs/b2cargo-pdf/releases** adresine gidin ve en
+   üstteki sürümde **`PerfettiVardiyaAyirma.zip`** dosyasını indirin.
+   - *(Henüz sürüm yoksa: repo → **Actions** → "Windows EXE Derle" → en son
+     çalışmanın altındaki **Artifacts**'tan `PerfettiVardiyaAyirma.zip`.)*
+2. ZIP'e sağ tıklayın → **Tümünü ayıkla**. Çıkan klasörü kolay bir yere
+   taşıyın (örn. **`C:\Perfetti`**). İçinde şunlar olur:
+   - `PerfettiVardiyaAyirma.exe` — program
+   - `Gelen_PDF\` — PDF'leri buraya koyacaksınız
+   - `config\regions.yaml` — bölge listesi (gerekirse Not Defteri ile düzenlenir)
+3. Vardiya irsaliye PDF'lerinin **hepsini** `Gelen_PDF\` klasörüne kopyalayın.
+4. **`PerfettiVardiyaAyirma.exe`** dosyasına **çift tıklayın** → açılan
+   pencerede **AYIR** butonuna basın.
+5. İşlem bitince özet görünür; **"Çıktı Klasörünü Aç"** ile sonuçları
+   (`Birlesik_PDF\<vardiya>\`) açabilirsiniz.
+
+> Windows "bilinmeyen yayıncı" uyarısı verirse: **Ek bilgi → Yine de çalıştır**.
+>
+> Sonraki vardiyalarda sadece 3–5. adımları tekrarlarsınız.
+
+Aşağıdaki **Python ile kurulum** yalnızca geliştirici/yedek yoldur; hazır
+`.exe` kullanıyorsanız gerekmez.
+
+---
+
 ## 1. Adım — Python kurun (tek seferlik)
 
 1. Tarayıcıda **https://www.python.org/downloads/** adresine gidin.
@@ -74,6 +103,9 @@ Vardiya irsaliye PDF'lerinin **hepsini** şu klasöre kopyalayın:
 ```
 
 Sonraki vardiyalarda sadece **4. ve 5. adımları** tekrarlarsınız.
+
+> **Pencereli arayüz isterseniz:** `calistir.bat` yerine **`arayuz.bat`**'a çift
+> tıklayın — yukarıdaki `.exe` ile aynı pencere açılır (klasör seç → AYIR).
 
 ---
 

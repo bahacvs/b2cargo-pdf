@@ -46,6 +46,16 @@ Antalya:
 Aytop:
   - İstanbul
   - Tekirdağ
+  - Çorlu          # ilçe (Tekirdağ)
+  - Çerkezköy      # ilçe (Tekirdağ)
+  - Kapaklı        # ilçe (Tekirdağ)
+  - Ergene         # ilçe (Tekirdağ)
+  - Süleymanpaşa   # ilçe (Tekirdağ)
+  - Malkara        # ilçe (Tekirdağ)
+  - Hayrabolu      # ilçe (Tekirdağ)
+  - Muratlı        # ilçe (Tekirdağ)
+  - Marmaraereğlisi # ilçe (Tekirdağ)
+  - Şarköy         # ilçe (Tekirdağ)
   - Edirne
   - Kırklareli
   - Kocaeli

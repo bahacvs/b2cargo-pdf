@@ -53,12 +53,17 @@ jobs:
 
           1) Vardiya irsaliye PDF'lerinin HEPSINI 'Gelen_PDF' klasorune kopyalayin.
           2) 'PerfettiVardiyaAyirma.exe' dosyasina cift tiklayin.
-          3) Pencerede 'AYIR' butonuna basin. Sonuc 'Birlesik_PDF' klasorunde olusur;
-             pencereden 'Cikti Klasorunu Ac' ile acabilirsiniz.
+          3) Pencerede 'AYIR' butonuna basin.
 
-          BOLGE LISTESI: 'config\regions.yaml' dosyasini Not Defteri ile acip
-          duzenleyebilirsiniz (yeni il/ilce eklemek icin). Programi yeniden
-          derlemeye gerek yoktur.
+          CIKTI: 'Birlesik_PDF' altinda her bolge icin bir KLASOR olusur; icinde
+          irsaliyeler '{Alici} - {PVS}.pdf' adiyla ayri ayri durur. Pencereden
+          'Cikti Klasorunu Ac' ile acabilirsiniz.
+
+          HATA: Bolgesi bulunamayan evraklar 'Hata' klasorune gider; icindeki
+          'Hata_raporu.csv' nedeni ve okunan adresi gosterir. Eksik bir sehir
+          varsa 'config\regions.yaml' dosyasini Not Defteri ile acip ekleyin,
+          sonra penceredeki 'Hata Klasorunu Tekrar Tara' butonuna basin.
+          (Programi yeniden derlemeye gerek yoktur.)
           "@ | Out-File -FilePath "$dist/KULLANIM.txt" -Encoding utf8
 
       - name: Zip'le

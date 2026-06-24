@@ -59,6 +59,7 @@ class Document:
     pvs: Optional[str] = None
     belge_no: Optional[str] = None
     address: Optional[str] = None
+    recipient: Optional[str] = None
     region: Optional[str] = None
     errors: list[str] = field(default_factory=list)
 
@@ -77,6 +78,36 @@ def sevk_block(text: str) -> Optional[str]:
     return text[m.end():end]
 
 
+def _sevk_keep_lines(block: str) -> list[str]:
+    """SEVK blogundan meta/gurultu satirlari elenmis anlamli satirlar."""
+    keep: list[str] = []
+    for raw in block.splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+        nlow = normalize(line)
+        if any(nlow.startswith(prefix) for prefix in _NOISE_PREFIXES):
+            continue
+        keep.append(line)
+    return keep
+
+
+def _dedup_repeat(s: str) -> str:
+    """Iki-kolon birlesmesinden gelen tekrari sadelestirir.
+
+    'GRATIS - ADANA DEPO GRATIS - ADANA DEPO' -> 'GRATIS - ADANA DEPO'.
+    Metin ortadaki bosluktan ikiye bolundugunde iki yari ayniysa tek yari
+    dondurulur.
+    """
+    s = " ".join(s.split())  # bosluklari sadelestir
+    n = len(s)
+    if n >= 3 and n % 2 == 1:
+        half = n // 2
+        if s[:half] == s[half + 1:] and s[half] == " ":
+            return s[:half]
+    return s
+
+
 def extract_destination(text: str) -> Optional[str]:
     """SEVK (teslimat) adresinin bolge tespitine yarayan satirlarini dondurur.
 
@@ -89,17 +120,26 @@ def extract_destination(text: str) -> Optional[str]:
     block = sevk_block(text)
     if block is None:
         return None
-    keep: list[str] = []
-    for raw in block.splitlines():
-        line = raw.strip()
-        if not line:
-            continue
-        nlow = normalize(line)
-        if any(nlow.startswith(prefix) for prefix in _NOISE_PREFIXES):
-            continue
-        keep.append(line)
-    cleaned = " ".join(keep).strip()
+    cleaned = " ".join(_sevk_keep_lines(block)).strip()
     return cleaned or None
+
+
+def extract_recipient(text: str) -> Optional[str]:
+    """SEVK adresindeki alici adini dondurur (orn. 'A101 ADANA').
+
+    'Adres:' satirindan ONCEKI anlamli satir(lar) alici adidir. Iki-kolon
+    birlesmesinden gelen tekrar sadelestirilir. Bulunamazsa None.
+    """
+    block = sevk_block(text)
+    if block is None:
+        return None
+    before_adres: list[str] = []
+    for line in _sevk_keep_lines(block):
+        if normalize(line).startswith("adres"):
+            break
+        before_adres.append(line)
+    name = _dedup_repeat(" ".join(before_adres).strip())
+    return name or None
 
 
 def parse_document(path: str, text: str) -> Document:
@@ -123,5 +163,7 @@ def parse_document(path: str, text: str) -> Document:
     doc.address = extract_destination(text)
     if not doc.address:
         doc.errors.append("adres okunamadı")
+
+    doc.recipient = extract_recipient(text)
 
     return doc

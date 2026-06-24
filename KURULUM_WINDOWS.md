@@ -94,13 +94,25 @@ Vardiya irsaliye PDF'lerinin **hepsini** şu klasöre kopyalayın:
 
 ```
 <program klasörü>\workdir\Birlesik_PDF\<vardiya>\
-├── Adana_24evrak.pdf
-├── Ankara_31evrak.pdf
+├── Adana\                ← bölge klasörü
+│   ├── A101 ADANA - PVS2026000029867.pdf
+│   └── GRATIS - ADANA DEPO - PVS2026000030031.pdf
+├── Ankara\
+│   └── A101 KAYSERI - PVS2026000029873.pdf
 ├── ...
-├── Hata_3evrak.pdf       ← bölgesi belirlenemeyen / eksik bilgili evraklar
-├── Hata_raporu.csv       ← her hatalı dosya ve nedeni
+├── Hata\                 ← bölgesi belirlenemeyen / eksik bilgili evraklar
+│   ├── <sorunlu PDF'ler>
+│   └── Hata_raporu.csv   ← her hatalı dosya + nedeni + okunan adres
 └── ozet.txt              ← vardiya özeti
 ```
+
+> **Çıktı:** Her bölge artık ayrı bir **klasör**; içinde irsaliyeler `{Alıcı} - {PVS}.pdf`
+> adıyla ayrı ayrı durur (tek birleşik PDF yok).
+>
+> **Hata klasörü:** Bölgesi bulunamayan evraklar buraya gelir; `Hata_raporu.csv`
+> her birinin nedenini ve okunan adresi gösterir. Eksik bir şehir varsa
+> `config\regions.yaml`'a ekleyip, arayüzdeki **"Hata Klasörünü Tekrar Tara"**
+> butonuyla bu evrakları yeniden işleyebilirsiniz.
 
 Sonraki vardiyalarda sadece **4. ve 5. adımları** tekrarlarsınız.
 

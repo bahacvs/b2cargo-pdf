@@ -155,6 +155,8 @@ def main() -> int:
     open_out_btn.pack(side="left")
     open_err_btn = tk.Button(btns, text="Hata Raporunu Ac", state="disabled")
     open_err_btn.pack(side="left", padx=6)
+    rescan_btn = tk.Button(btns, text="Hata Klasorunu Tekrar Tara", state="disabled")
+    rescan_btn.pack(side="left")
 
     def set_result_text(text: str) -> None:
         result_box.configure(state="normal")
@@ -175,7 +177,9 @@ def main() -> int:
         status_var.set("Tamamlandi.")
         set_result_text(result.summary + f"\n\nCikti klasoru:\n{result.out_dir}")
         open_out_btn.configure(state="normal")
-        open_err_btn.configure(state="normal" if result.error_count else "disabled")
+        has_err = bool(result.error_count)
+        open_err_btn.configure(state="normal" if has_err else "disabled")
+        rescan_btn.configure(state="normal" if has_err else "disabled")
 
     def worker(input_dir: str, shift_name: str | None) -> None:
         try:
@@ -202,6 +206,7 @@ def main() -> int:
         ayir_btn.configure(state="disabled")
         open_out_btn.configure(state="disabled")
         open_err_btn.configure(state="disabled")
+        rescan_btn.configure(state="disabled")
         set_result_text("")
         status_var.set(f"{len(pdfs)} PDF isleniyor, lutfen bekleyin...")
         progress.pack(fill="x", padx=12)
@@ -220,10 +225,24 @@ def main() -> int:
     def open_error_report() -> None:
         r = last_result["r"]
         if r and r.error_count:
-            open_in_explorer(str(Path(r.out_dir) / "Hata_raporu.csv"))
+            open_in_explorer(str(Path(r.out_dir) / "Hata" / "Hata_raporu.csv"))
+
+    def rescan_errors() -> None:
+        # config/regions.yaml duzeltildikten sonra Hata klasorunu yeniden isle.
+        r = last_result["r"]
+        if not r or not r.error_count:
+            return
+        hata_dir = Path(r.out_dir) / "Hata"
+        if not hata_dir.is_dir():
+            messagebox.showwarning("Hata klasoru yok", f"Bulunamadi:\n{hata_dir}")
+            return
+        folder_var.set(str(hata_dir))
+        name_var.set("Hata_tekrar")
+        start()
 
     open_out_btn.configure(command=open_output)
     open_err_btn.configure(command=open_error_report)
+    rescan_btn.configure(command=rescan_errors)
 
     ayir_btn = tk.Button(
         root, text="AYIR", command=start,

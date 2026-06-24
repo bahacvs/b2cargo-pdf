@@ -16,7 +16,7 @@ from . import report
 from .extractor import extract_text
 from .parser import Document, parse_document
 from .regions import RegionMap
-from .splitter import region_filename, write_region_pdfs
+from .splitter import copy_docs, write_region_folders
 
 
 @dataclass
@@ -26,7 +26,7 @@ class PipelineResult:
     documents: list[Document] = field(default_factory=list)
     region_counts: dict[str, int] = field(default_factory=dict)
     error_count: int = 0
-    written_files: dict[str, str] = field(default_factory=dict)
+    written_files: dict[str, list[str]] = field(default_factory=dict)
     summary: str = ""
 
 
@@ -77,33 +77,25 @@ def run(
     documents = process_documents(paths, region_map)
 
     # Bolgeye gore grupla; hatali olanlari ayir.
-    grouped: dict[str, list[str]] = defaultdict(list)
+    grouped: dict[str, list[Document]] = defaultdict(list)
     error_docs: list[Document] = []
     for doc in documents:
         if doc.region:
-            grouped[doc.region].append(doc.path)
+            grouped[doc.region].append(doc)
         else:
             error_docs.append(doc)
 
-    written = write_region_pdfs(grouped, out_dir)
+    # Her bolge icin bir klasor, icine ayri PDF'ler.
+    written = write_region_folders(grouped, out_dir)
 
-    # Hata PDF'i (tum hatali dosyalari tek PDF'te topla).
+    # Hata klasoru: basarisiz PDF'ler ayri ayri + neden raporu icinde.
     if error_docs:
-        from .splitter import merge_pdfs
-
-        readable = [d.path for d in error_docs if d.path and Path(d.path).exists()]
-        if readable:
-            hata_path = out_dir / region_filename("Hata", len(error_docs))
-            try:
-                merge_pdfs(readable, hata_path)
-                written["Hata"] = str(hata_path)
-            except Exception:
-                pass  # bozuk PDF'ler birlestirilemeyebilir; rapor yeterli
+        hata_dir = out_dir / "Hata"
+        written["Hata"] = copy_docs(error_docs, hata_dir)
+        report.write_error_report(error_docs, hata_dir / "Hata_raporu.csv")
 
     # Raporlar.
-    region_counts = {r: len(p) for r, p in grouped.items()}
-    if error_docs:
-        report.write_error_report(error_docs, out_dir / "Hata_raporu.csv")
+    region_counts = {r: len(d) for r, d in grouped.items()}
     summary = report.format_summary(region_counts, len(error_docs))
     report.write_summary(summary, out_dir / "ozet.txt")
 

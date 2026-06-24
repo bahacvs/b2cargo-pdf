@@ -1,13 +1,19 @@
-"""Birlestirme/gruplama ve uctan uca pipeline testleri."""
+"""Bolge klasoru + ayri PDF cikti ve uctan uca pipeline testleri."""
 
 from pathlib import Path
 
 import pytest
 from pypdf import PdfReader
 
+from perfetti_splitter.parser import Document
 from perfetti_splitter.pipeline import run
 from perfetti_splitter.regions import RegionMap
-from perfetti_splitter.splitter import merge_pdfs, region_filename, write_region_pdfs
+from perfetti_splitter.splitter import (
+    copy_docs,
+    doc_filename,
+    safe_filename,
+    write_region_folders,
+)
 
 
 @pytest.fixture
@@ -21,40 +27,57 @@ def region_map():
     )
 
 
-def test_region_filename():
-    assert region_filename("Adana", 24) == "Adana_24evrak.pdf"
-    assert region_filename("Hata", 3) == "Hata_3evrak.pdf"
+def test_safe_filename_strips_invalid_chars():
+    assert safe_filename('A101 / ADANA: *DEPO*') == "A101 ADANA DEPO"
+    assert safe_filename("   ") == "irsaliye"  # bos -> varsayilan
 
 
-def test_merge_pdfs_counts_pages(tmp_path, make_pdf):
-    a = make_pdf(tmp_path / "a.pdf", pages=2)
-    b = make_pdf(tmp_path / "b.pdf", pages=1)
-    out = tmp_path / "merged.pdf"
-    n = merge_pdfs([str(a), str(b)], out)
-    assert n == 3
-    assert len(PdfReader(str(out)).pages) == 3
+def test_doc_filename_recipient_plus_pvs():
+    doc = Document(path="x.pdf", recipient="A101 ADANA", pvs="PVS2026000123")
+    assert doc_filename(doc) == "A101 ADANA - PVS2026000123.pdf"
 
 
-def test_write_region_pdfs_names_by_count(tmp_path, make_pdf):
+def test_doc_filename_falls_back_to_original_stem():
+    doc = Document(path="/in/orig.pdf", recipient=None, pvs=None)
+    assert doc_filename(doc) == "orig.pdf"
+
+
+def test_copy_docs_handles_name_collision(tmp_path, make_pdf):
     p1 = make_pdf(tmp_path / "1.pdf")
     p2 = make_pdf(tmp_path / "2.pdf")
-    grouped = {"Adana": [str(p1), str(p2)]}
-    written = write_region_pdfs(grouped, tmp_path / "out")
-    assert Path(written["Adana"]).name == "Adana_2evrak.pdf"
-    assert Path(written["Adana"]).exists()
+    docs = [
+        Document(path=str(p1), recipient="A101 ADANA", pvs="PVS1"),
+        Document(path=str(p2), recipient="A101 ADANA", pvs="PVS1"),  # ayni ad
+    ]
+    written = copy_docs(docs, tmp_path / "Adana")
+    names = sorted(Path(w).name for w in written)
+    assert names == ["A101 ADANA - PVS1 (2).pdf", "A101 ADANA - PVS1.pdf"]
+    assert all(Path(w).exists() for w in written)
+
+
+def test_write_region_folders_creates_subfolders(tmp_path, make_pdf):
+    p1 = make_pdf(tmp_path / "a.pdf")
+    p2 = make_pdf(tmp_path / "b.pdf")
+    grouped = {
+        "Adana": [Document(path=str(p1), recipient="A101 ADANA", pvs="PVS1")],
+        "Ankara": [Document(path=str(p2), recipient="A101 ANKARA", pvs="PVS2")],
+    }
+    written = write_region_folders(grouped, tmp_path / "out")
+    assert (tmp_path / "out" / "Adana" / "A101 ADANA - PVS1.pdf").exists()
+    assert (tmp_path / "out" / "Ankara" / "A101 ANKARA - PVS2.pdf").exists()
+    # kopyalanan dosya gecerli bir PDF
+    assert len(PdfReader(written["Adana"][0]).pages) >= 1
 
 
 def test_end_to_end_pipeline(tmp_path, make_pdf):
     gelen = tmp_path / "Gelen"
     gelen.mkdir()
     # 2 Adana, 1 Ankara, 1 bilinmeyen (Hata), 1 Bilecik cakismasi (Hata).
-    # Tum PDF'lerde gonderici/fatura Istanbul (Aytop) tuzagi var; dogru
-    # ayrim SEVK adresindeki il'e gore yapilmali.
-    make_pdf(gelen / "a1.pdf", il="ADANA")
-    make_pdf(gelen / "a2.pdf", il="MERSIN")
-    make_pdf(gelen / "ank.pdf", il="ANKARA")
-    make_pdf(gelen / "unknown.pdf", il="ATLANTIS")
-    make_pdf(gelen / "conflict.pdf", il="BILECIK")
+    make_pdf(gelen / "a1.pdf", il="ADANA", pvs="PVS0001")
+    make_pdf(gelen / "a2.pdf", il="MERSIN", pvs="PVS0002")
+    make_pdf(gelen / "ank.pdf", il="ANKARA", pvs="PVS0003")
+    make_pdf(gelen / "unknown.pdf", il="ATLANTIS", pvs="PVS0004")
+    make_pdf(gelen / "conflict.pdf", il="BILECIK", pvs="PVS0005")
 
     region_map = RegionMap(
         {
@@ -70,10 +93,14 @@ def test_end_to_end_pipeline(tmp_path, make_pdf):
     assert result.error_count == 2  # unknown + bilecik cakismasi
 
     out_dir = Path(result.out_dir)
-    assert (out_dir / "Adana_2evrak.pdf").exists()
-    assert (out_dir / "Ankara_1evrak.pdf").exists()
-    assert (out_dir / "Hata_2evrak.pdf").exists()
-    assert (out_dir / "Hata_raporu.csv").exists()
+    # Bolge KLASORLERI ve icindeki dosyalar
+    assert (out_dir / "Adana").is_dir()
+    assert len(list((out_dir / "Adana").glob("*.pdf"))) == 2
+    assert (out_dir / "Ankara" / "A101 ANKARA - PVS0003.pdf").exists()
+    # Hata klasoru + rapor
+    assert (out_dir / "Hata").is_dir()
+    assert len(list((out_dir / "Hata").glob("*.pdf"))) == 2
+    assert (out_dir / "Hata" / "Hata_raporu.csv").exists()
     assert (out_dir / "ozet.txt").exists()
 
 

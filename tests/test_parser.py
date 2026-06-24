@@ -1,7 +1,11 @@
 """Alan cikarimi (PVS / belge no / SEVK adresi) testleri."""
 
 from perfetti_splitter.extractor import extract_text
-from perfetti_splitter.parser import extract_destination, parse_document
+from perfetti_splitter.parser import (
+    extract_destination,
+    extract_recipient,
+    parse_document,
+)
 from perfetti_splitter.regions import RegionMap
 
 # Testlerde kullanilan kucuk bolge haritasi.
@@ -99,6 +103,27 @@ def test_empty_text_is_error():
     doc = parse_document("ghost.pdf", "")
     assert not doc.ok
     assert "adres okunamadı" in doc.errors
+
+
+def test_extract_recipient_basic(tmp_path, make_pdf):
+    pdf = make_pdf(tmp_path / "r.pdf", il="ADANA")
+    text = extract_text(str(pdf))
+    doc = parse_document(str(pdf), text)
+    assert doc.recipient == "A101 ADANA"
+
+
+def test_extract_recipient_dedups_doubled_name():
+    text = (
+        "SEVK ADRESI Irsaliye No: PVS1\n"
+        "GRATIS - ADANA DEPO GRATIS - ADANA DEPO\n"
+        "Adres: 6515 SULUCA MH./SARICAM/Turkiye\n"
+        "FATURA ADRESI\n"
+    )
+    assert extract_recipient(text) == "GRATIS - ADANA DEPO"
+
+
+def test_extract_recipient_none_without_sevk():
+    assert extract_recipient("hicbir sevk blogu yok") is None
 
 
 def test_extract_destination_excludes_sender_and_billing():

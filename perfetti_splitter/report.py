@@ -11,18 +11,23 @@ if TYPE_CHECKING:
 
 
 def write_error_report(error_docs: list["Document"], out_path: str | Path) -> str:
-    """Hatali belgeleri CSV olarak yazar: dosya, pvs, belge_no, neden."""
+    """Hatali belgeleri CSV olarak yazar: dosya, pvs, belge_no, bulunan_adres, neden.
+
+    `bulunan_adres` programin SEVK adresinden okudugu metindir; "bölge
+    bulunamadı" gibi hatalarin nedenini PDF acmadan gormeyi saglar.
+    """
     out_path = Path(out_path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     with open(out_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
-        writer.writerow(["dosya", "pvs", "belge_no", "neden"])
+        writer.writerow(["dosya", "pvs", "belge_no", "bulunan_adres", "neden"])
         for doc in error_docs:
             writer.writerow(
                 [
                     Path(doc.path).name,
                     doc.pvs or "",
                     doc.belge_no or "",
+                    doc.address or "",
                     "; ".join(doc.errors),
                 ]
             )

@@ -27,14 +27,25 @@ def make_irsaliye_pdf(
     belge_no: str | None = "0700000456",
     il: str = "ADANA",
     ilce: str = "Merkez",
+    recipient: str | None = None,
+    addr_tail: str | None = None,
+    vergi_dairesi: str = "BESIKTAS",
     pages: int = 1,
     include_sevk: bool = True,
 ) -> Path:
     """Tek bir irsaliye PDF'i (1+ sayfa) uretir.
 
-    il: SEVK adresindeki hedef il (bolge bundan tespit edilir).
+    il          : varsayilan hedef il (recipient/addr_tail verilmezse kullanilir).
+    recipient   : SEVK alici adi satiri (sehir genelde burada). Vars: 'A101 {il}'.
+    addr_tail   : SEVK 'Adres:' satirinin sonu. Vars: '7 {ilce}/{il}/Turkiye'.
+                  Gercek hayatta bazen sadece ILCE icerir (orn.
+                  '6515 SULUCA MH./SARICAM/Turkiye') ve il yalnizca recipient'tedir.
+    vergi_dairesi: alicinin vergi dairesi sehri; teslimat ilinden FARKLI olabilir,
+                  bolge tespitine karismamali.
     include_sevk=False ise SEVK blogu hic yazilmaz (adres okunamadi senaryosu).
     """
+    recipient = recipient if recipient is not None else f"A101 {il}"
+    addr_tail = addr_tail if addr_tail is not None else f"7 {ilce}/{il}/Turkiye"
     c = canvas.Canvas(str(path), pagesize=A4)
     width, height = A4
     for page_no in range(pages):
@@ -46,9 +57,12 @@ def make_irsaliye_pdf(
         if include_sevk:
             lines += [
                 f"SEVK ADRESI Irsaliye No: {pvs or ''}",
-                f"A101 {il}",
-                "Adres: KORU MAH. SUKRU ALBAYRAK CAD. NO:",
-                f"7 {ilce}/{il}/Turkiye",                       # DOGRU hedef
+                recipient,                                       # alici adi (sehir burada)
+                "Ozellestirme No : TR1.2.1",
+                "Adres: KORU MAH. SUKRU ALBAYRAK CAD.",
+                addr_tail,                                       # bazen sadece ilce
+                f"Vergi Dairesi: {vergi_dairesi}",               # farkli sehir olabilir
+                "Irsaliye Tipi : SEVK",
             ]
         if belge_no:
             lines.append(f"Belge No : {belge_no}")

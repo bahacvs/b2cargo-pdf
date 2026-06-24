@@ -10,10 +10,12 @@ Bir belgede UC adres bulunur:
   1. Ust kisim   : PERFETTI VAN MELLE'nin kendi adresi  (... Esenyurt/Istanbul)
   2. SEVK ADRESI : asil teslimat adresi  (... Ilce/Il/Turkiye)   <-- KULLANILAN
   3. FATURA ADRESI: fatura adresi          (... Il/TR)
-Yalnizca SEVK ADRESI altindaki "Adres:" blogu kullanilir. Buradaki hedef il,
-"Ilce/Il/Turkiye" kalibiyla okunur. (Fatura adresi /TR ile bittigi icin bu
-kalibla karismaz; gonderici adresi ise SEVK ADRESI'nden once oldugu icin
-blok disinda kalir.)
+Yalnizca SEVK ADRESI ile FATURA ADRESI arasindaki blok kullanilir; gonderici
+(blok oncesi) ve fatura (blok sonrasi) adresleri haric tutulur. Bloktan meta
+satirlari elenip alici adi + "Adres:" satiri birakilir ve sehir bu metnin
+TAMAMINDA aranir. Boylece adres satirinda yalnizca ILCE yazsa bile (orn.
+".../SARICAM/Türkiye") sehir, alici adindaki ILDEN (orn. "GRATIS - ADANA DEPO")
+bulunur.
 """
 
 from __future__ import annotations
@@ -21,6 +23,8 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 from typing import Optional
+
+from .regions import normalize
 
 # --- Kalibre edilebilir desenler -------------------------------------------
 # PVS kodu, orn: PVS2026000029860
@@ -30,9 +34,20 @@ BELGE_RE = re.compile(r"0700\d+")
 # Adres bloklarinin etiketleri.
 SEVK_LABEL_RE = re.compile(r"SEVK\s*ADRES[İI]", re.IGNORECASE)
 FATURA_LABEL_RE = re.compile(r"FATURA\s*ADRES[İI]", re.IGNORECASE)
-# Hedef adresin sonundaki  Ilce/Il/Turkiye  kalibi -> il = son slash'tan onceki.
-# (Fatura adresi /TR ile bittiginden bu kalibla eslesmez.)
-DEST_PROVINCE_RE = re.compile(r"([^/\n]+)/\s*t[uü]rk[iİ]ye", re.IGNORECASE)
+
+# SEVK blogunda bolge tespitine YARDIMCI OLMAYAN meta/gurultu satirlari.
+# Bu satirlar elenir; ozellikle "Vergi Dairesi" elenir cunku alicinin vergi
+# dairesi sehri teslimat ilinden farkli olabilir (orn. BESIKTAS) ve yanlis
+# cakisma yaratir. Karsilastirma Turkce-duyarsiz (normalize) yapilir.
+_NOISE_PREFIXES = [
+    normalize(p)
+    for p in [
+        "Özelleştirme", "Senaryo", "İrsaliye", "Vergi Dairesi", "VKN",
+        "BAYINO", "Sevk Tarihi", "Sevk Zamanı", "Belge No", "ETTN", "Mühür",
+        "Müşteri", "M.Sipariş", "Sipariş", "SAP", "Asıl Alıcı", "Taşıyıcı",
+        "Toplam", "Araç", "Sayfa", "Ürün", "Mal Hizmet", "Not ", "Özelleştir",
+    ]
+]
 
 
 @dataclass
@@ -63,18 +78,27 @@ def sevk_block(text: str) -> Optional[str]:
 
 
 def extract_destination(text: str) -> Optional[str]:
-    """SEVK adresindeki hedef il'i dondurur (orn. 'TRABZON'); bulunamazsa None.
+    """SEVK (teslimat) adresinin bolge tespitine yarayan satirlarini dondurur.
 
-    Once SEVK blogundaki 'Ilce/Il/Turkiye' kalibi denenir. Kalip yoksa,
-    sehir taramasi yapilabilsin diye SEVK blogunun ham metni dondurulur.
+    SEVK blogundan meta/gurultu satirlari (_NOISE_PREFIXES) elenir; geriye
+    alici adi (orn. 'GRATIS - ADANA DEPO') ve 'Adres:' satiri kalir. Sehir,
+    adres satirinda yalnizca ilce yazsa bile (orn. '.../SARICAM/Türkiye')
+    alici adindaki ilden (ADANA) bulunabilsin diye blok butun olarak
+    `regions.detect()`'e verilir. Bulunamazsa None.
     """
     block = sevk_block(text)
     if block is None:
         return None
-    m = DEST_PROVINCE_RE.search(block)
-    if m:
-        return m.group(1).strip()
-    cleaned = block.strip()
+    keep: list[str] = []
+    for raw in block.splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+        nlow = normalize(line)
+        if any(nlow.startswith(prefix) for prefix in _NOISE_PREFIXES):
+            continue
+        keep.append(line)
+    cleaned = " ".join(keep).strip()
     return cleaned or None
 
 

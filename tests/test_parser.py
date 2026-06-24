@@ -2,6 +2,21 @@
 
 from perfetti_splitter.extractor import extract_text
 from perfetti_splitter.parser import extract_destination, parse_document
+from perfetti_splitter.regions import RegionMap
+
+# Testlerde kullanilan kucuk bolge haritasi.
+RM = RegionMap(
+    {
+        "Adana": ["Adana", "Mersin", "Kahramanmaraş"],
+        "Ankara": ["Ankara", "Kayseri"],
+        "Aytop": ["İstanbul", "Bursa"],
+        "Samsun": ["Trabzon"],
+    }
+)
+
+
+def _region(text: str):
+    return RM.detect(extract_destination(text))
 
 
 def test_parse_full_document(tmp_path, make_pdf):
@@ -11,7 +26,7 @@ def test_parse_full_document(tmp_path, make_pdf):
     assert doc.ok
     assert doc.pvs == "PVS2026000123"
     assert doc.belge_no == "0700000456"
-    assert doc.address == "ADANA"
+    assert "ADANA" in (doc.address or "").upper()
     assert not doc.errors
 
 
@@ -21,8 +36,29 @@ def test_sevk_address_used_not_sender_or_billing(tmp_path, make_pdf):
     pdf = make_pdf(tmp_path / "trabzon.pdf", il="TRABZON")
     text = extract_text(str(pdf))
     doc = parse_document(str(pdf), text)
-    assert doc.address == "TRABZON"
+    assert "TRABZON" in (doc.address or "").upper()
     assert "ISTANBUL" not in (doc.address or "").upper()
+    assert _region(text) == ("Samsun", None)
+
+
+def test_city_from_recipient_when_address_has_only_district(tmp_path, make_pdf):
+    # Gercek vaka: SEVK adres satirinda yalnizca ILCE var (SARICAM=Adana ilcesi),
+    # il yazmiyor; ama alici adinda ADANA geciyor. Bolge ADANA bulunmali.
+    pdf = make_pdf(
+        tmp_path / "saricam.pdf",
+        recipient="GRATIS - ADANA DEPO GRATIS - ADANA DEPO",
+        addr_tail="6515 SULUCA MH./SARICAM/Turkiye",
+    )
+    text = extract_text(str(pdf))
+    assert _region(text) == ("Adana", None)
+
+
+def test_vergi_dairesi_city_does_not_cause_conflict(tmp_path, make_pdf):
+    # Alicinin vergi dairesi farkli bir sehir (BURSA=Aytop) olsa bile teslimat
+    # ili (ADANA) ile cakisma yaratmamali; "Vergi Dairesi" satiri elenir.
+    pdf = make_pdf(tmp_path / "vd.pdf", il="ADANA", vergi_dairesi="BURSA")
+    text = extract_text(str(pdf))
+    assert _region(text) == ("Adana", None)
 
 
 def test_multipage_document_is_single_irsaliye(tmp_path, make_pdf):
@@ -30,7 +66,7 @@ def test_multipage_document_is_single_irsaliye(tmp_path, make_pdf):
     text = extract_text(str(pdf))
     doc = parse_document(str(pdf), text)
     assert doc.ok
-    assert doc.address == "ANKARA"
+    assert "ANKARA" in (doc.address or "").upper()
     assert doc.pvs == "PVS2026000123"
 
 
@@ -65,6 +101,18 @@ def test_empty_text_is_error():
     assert "adres okunamadı" in doc.errors
 
 
-def test_extract_destination_from_province_pattern():
-    text = "SEVK ADRESI\nAdres: KORU MAH.\n7 Arsin/TRABZON/Turkiye\nFATURA ADRESI\nAdres: x/Istanbul/TR"
-    assert extract_destination(text) == "TRABZON"
+def test_extract_destination_excludes_sender_and_billing():
+    text = (
+        "Adres: Esenyurt/Istanbul\n"
+        "SEVK ADRESI Irsaliye No: PVS2026000123\n"
+        "A101 TRABZON\n"
+        "Adres: KORU MAH.\n"
+        "7 Arsin/TRABZON/Turkiye\n"
+        "Vergi Dairesi: ALEMDAG\n"
+        "FATURA ADRESI\n"
+        "Adres: x/Istanbul/TR"
+    )
+    dest = extract_destination(text)
+    assert "TRABZON" in dest.upper()
+    assert "ISTANBUL" not in dest.upper()
+    assert "ALEMDAG" not in dest.upper()  # Vergi Dairesi satiri elendi

@@ -4,7 +4,7 @@ name: Windows EXE Derle
 # Tetik: bu dosya main'e her yazildiginda calisir ve KODU feature branch'ten
 # checkout edip derler (kaynak main'e merge edilmez). Yeniden derlemek icin
 # bu dosyada kucuk bir degisiklik yapip main'e yazmak yeterli.
-# Surum notu: B2/DSV ayrimi (DSV=Istanbul); B2 bolgelerinde Palet/Dökme.
+# Surum notu: B2/DSV (DSV=Istanbul); B2'de Palet/Dökme; Tekirdag ilceleri.
 
 on:
   workflow_dispatch:
@@ -76,10 +76,14 @@ jobs:
           yaptigi il/ilce adlarini yazin (her satira bir tane). Programi yeniden
           derlemeye gerek yoktur.
 
+          BOLGE LISTESI: 'config\regions.yaml' bolge->il/ilce haritasidir. Bir
+          evrak 'bolge bulunamadi' ile Hata'ya duserse, adresteki il/ilce adini
+          dogru bolgenin altina ekleyin (yeniden derleme gerekmez).
+
           HATA: Bolgesi bulunamayan VEYA koli adedi okunamayan evraklar 'Hata'
           klasorune gider; icindeki 'Hata_raporu.csv' nedeni ve okunan adresi
-          gosterir. Eksik bir sehir varsa 'config\regions.yaml'a ekleyip
-          penceredeki 'Hata Klasorunu Tekrar Tara' butonuna basin.
+          gosterir. Duzelttikten sonra penceredeki 'Hata Klasorunu Tekrar Tara'
+          butonuna basin.
           "@ | Out-File -FilePath "$dist/KULLANIM.txt" -Encoding utf8
 
       - name: Zip'le

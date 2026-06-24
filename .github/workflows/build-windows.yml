@@ -4,6 +4,7 @@ name: Windows EXE Derle
 # Tetik: bu dosya main'e her yazildiginda calisir ve KODU feature branch'ten
 # checkout edip derler (kaynak main'e merge edilmez). Yeniden derlemek icin
 # bu dosyada kucuk bir degisiklik yapip main'e yazmak yeterli.
+# Surum notu: B2/DSV ayrimi; DSV = Istanbul (Bursa/Yalova haric).
 
 on:
   workflow_dispatch:

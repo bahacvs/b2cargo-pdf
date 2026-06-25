@@ -4,7 +4,7 @@ name: Windows EXE Derle
 # Tetik: bu dosya main'e her yazildiginda calisir ve KODU feature branch'ten
 # checkout edip derler (kaynak main'e merge edilmez). Yeniden derlemek icin
 # bu dosyada kucuk bir degisiklik yapip main'e yazmak yeterli.
-# Surum notu: B2/DSV; Palet/Dökme; Tekirdag ilceleri; bolge adinda evrak sayisi.
+# Surum notu: DSV = Istanbul komple + ilce/isim noktalari (Excel listesi).
 
 on:
   workflow_dispatch:
@@ -72,9 +72,9 @@ jobs:
           Irsaliyeler '{Alici} - {PVS}.pdf' adiyla ayri ayri durur. Pencereden
           'Cikti Klasorunu Ac' ile acabilirsiniz.
 
-          DSV LISTESI: 'config\dsv_lokasyonlar.yaml' dosyasina DSV'nin teslimat
-          yaptigi il/ilce adlarini yazin (her satira bir tane). Programi yeniden
-          derlemeye gerek yoktur.
+          DSV LISTESI: 'config\dsv_lokasyonlar.yaml'. 'iller:' altindakiler komple
+          DSV (Istanbul). 'noktalar:' altinda diger illerde ilce + alici adi
+          birlikte eslesince DSV. Programi yeniden derlemeye gerek yoktur.
 
           BOLGE LISTESI: 'config\regions.yaml' bolge->il/ilce haritasidir. Bir
           evrak 'bolge bulunamadi' ile Hata'ya duserse, adresteki il/ilce adini

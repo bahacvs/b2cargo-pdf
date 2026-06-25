@@ -211,7 +211,7 @@ def main() -> int:
     status_var = ctk.StringVar(value="Hazır.")
     ctk.CTkLabel(root, textvariable=status_var, text_color=_MUTED,
                  font=ctk.CTkFont(family=FONT, size=12)).pack(padx=24, anchor="w")
-    progress = ctk.CTkProgressbar(root, mode="indeterminate", height=8)
+    progress = ctk.CTkProgressBar(root, mode="indeterminate", height=8)
 
     # ---- Sonuc: ozet kartlari + bolge listesi ----
     stats = ctk.CTkFrame(root, fg_color="transparent")

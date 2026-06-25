@@ -1,5 +1,5 @@
 name: Windows EXE Derle
-# Rebuild marker: 2026-06-25 reporting-improvements
+# Rebuild marker: 2026-06-25 professional-speed-2026-06-25T12-01-43-034Z
 
 # Teknik olmayan kullanici icin tek dosya .exe uretir.
 # Tetik: bu dosya main'e her yazildiginda calisir ve KODU feature branch'ten

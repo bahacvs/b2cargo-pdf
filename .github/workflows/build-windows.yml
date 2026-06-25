@@ -4,7 +4,7 @@ name: Windows EXE Derle
 # Tetik: bu dosya main'e her yazildiginda calisir ve KODU feature branch'ten
 # checkout edip derler (kaynak main'e merge edilmez). Yeniden derlemek icin
 # bu dosyada kucuk bir degisiklik yapip main'e yazmak yeterli.
-# Surum notu: DSV = Istanbul komple + ilce/isim noktalari (Excel listesi).
+# Surum notu: Modern arayuz (CustomTkinter) + acik/koyu tema + simge.
 
 on:
   workflow_dispatch:
@@ -44,8 +44,11 @@ jobs:
         run: >
           pyinstaller --onefile --windowed
           --name PerfettiVardiyaAyirma
+          --icon assets/app.ico
+          --collect-all customtkinter
           --add-data "config/regions.yaml;config"
           --add-data "config/dsv_lokasyonlar.yaml;config"
+          --add-data "assets/app.ico;assets"
           launch_gui.py
 
       - name: Dagitim klasoru hazirla
@@ -63,7 +66,7 @@ jobs:
 
           1) Vardiya irsaliye PDF'lerinin HEPSINI 'Gelen_PDF' klasorune kopyalayin.
           2) 'PerfettiVardiyaAyirma.exe' dosyasina cift tiklayin.
-          3) Pencerede 'AYIR' butonuna basin.
+          3) Pencerede 'AYIR' butonuna basin. Sag ustteki anahtarla acik/koyu tema.
 
           CIKTI: 'Birlesik_PDF/<vardiya>' altinda iki ana klasor olusur:
             - DSV : teslimat yeri DSV listesindeki evraklar (duz, tek klasor).

@@ -1,4 +1,5 @@
 name: Windows EXE Derle
+# Rebuild marker: 2026-06-25 CTkProgressBar fix
 
 # Teknik olmayan kullanici icin tek dosya .exe uretir.
 # Tetik: bu dosya main'e her yazildiginda calisir ve KODU feature branch'ten

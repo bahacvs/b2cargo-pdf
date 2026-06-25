@@ -4,7 +4,7 @@ name: Windows EXE Derle
 # Tetik: bu dosya main'e her yazildiginda calisir ve KODU feature branch'ten
 # checkout edip derler (kaynak main'e merge edilmez). Yeniden derlemek icin
 # bu dosyada kucuk bir degisiklik yapip main'e yazmak yeterli.
-# Surum notu: B2/DSV (DSV=Istanbul); B2'de Palet/Dökme; Tekirdag ilceleri.
+# Surum notu: B2/DSV; Palet/Dökme; Tekirdag ilceleri; bolge adinda evrak sayisi.
 
 on:
   workflow_dispatch:
@@ -67,8 +67,8 @@ jobs:
 
           CIKTI: 'Birlesik_PDF/<vardiya>' altinda iki ana klasor olusur:
             - DSV : teslimat yeri DSV listesindeki evraklar (duz, tek klasor).
-            - B2  : geri kalan evraklar; once bolge (Adana, Ankara...), her
-                    bolge icinde Palet (Toplam Koli >= 9) ve Dökme (<= 8).
+            - B2  : geri kalan evraklar; once 'Bolge (N evrak)' (Adana, Ankara...),
+                    her bolge icinde Palet (Toplam Koli >= 9) ve Dökme (<= 8).
           Irsaliyeler '{Alici} - {PVS}.pdf' adiyla ayri ayri durur. Pencereden
           'Cikti Klasorunu Ac' ile acabilirsiniz.
 

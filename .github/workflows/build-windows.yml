@@ -36,8 +36,11 @@ jobs:
         run: >
           pyinstaller --onefile --windowed
           --name PerfettiVardiyaAyirma
+          --icon assets/app.ico
+          --collect-all customtkinter
           --add-data "config/regions.yaml;config"
           --add-data "config/dsv_lokasyonlar.yaml;config"
+          --add-data "assets/app.ico;assets"
           launch_gui.py
 
       - name: Dagitim klasoru hazirla

@@ -46,6 +46,16 @@ def normalize(s: str) -> str:
 # adi adres metninden cikarilir. (Gercek PDF ile kalibre edilebilir.)
 DEFAULT_IGNORE_PHRASES = ["Perfetti Van Melle"]
 
+# Adresin sonundaki "Ilce/Il/Turkiye" veya "Ilce/Turkiye" kalibindan
+# Turkiye'den onceki segmenti cikarir. Bu segment cogu belgede teslimat ili,
+# bazi belgelerde ise ilce olabilir (orn. Cayirova/Turkiye).
+_PROVINCE_RE = re.compile(r"([^/\n]+)/\s*t[uü]rk[iİ]ye", re.IGNORECASE)
+
+
+def _has_word(token: str, ntext: str) -> bool:
+    """Normalize edilmis token, normalize metinde kelime butun olarak gecer mi?"""
+    return bool(token) and re.search(r"\b" + re.escape(token) + r"\b", ntext) is not None
+
 
 class RegionMap:
     """Bolge -> sehir haritasi ve adresten bolge tespiti."""
@@ -76,31 +86,43 @@ class RegionMap:
             data = yaml.safe_load(f) or {}
         return cls(data)
 
-    def detect(self, address: Optional[str]) -> tuple[Optional[str], Optional[str]]:
-        """(bolge, hata) dondurur. Basarili ise hata None'dir."""
-        if not address:
-            return None, "adres okunamadı"
-        ntext = normalize(address)
-        for phrase in self.ignore_phrases:  # firma adi vb. gurultuyu temizle
-            ntext = ntext.replace(phrase, " ")
-        found: set[str] = set()
-        for token, regions in self.token_regions.items():
-            if re.search(r"\b" + re.escape(token) + r"\b", ntext):
-                found |= regions
+    def _resolve_regions(self, found: set[str]) -> tuple[Optional[str], Optional[str]]:
         if not found:
             return None, "bölge bulunamadı"
         if len(found) > 1:
             return None, "belirsiz/çakışma: " + ", ".join(sorted(found))
         return next(iter(found)), None
 
+    def _terminal_location(self, address: str) -> str:
+        """Adresin sonundaki Turkiye'den onceki il/ilce segmentini dondurur."""
+        m = _PROVINCE_RE.search(address)
+        return normalize(m.group(1).strip()) if m else ""
 
-# Adresin sonundaki "Ilce/Il/Turkiye" kalibindan il (son slash'tan onceki) cikar.
-_PROVINCE_RE = re.compile(r"([^/\n]+)/\s*t[uü]rk[iİ]ye", re.IGNORECASE)
+    def detect(self, address: Optional[str]) -> tuple[Optional[str], Optional[str]]:
+        """(bolge, hata) dondurur. Basarili ise hata None'dir.
 
+        Once adres sonundaki teslimat il/ilce segmenti denenir. Boylece
+        "Ankara Bulvari", "Izmir Yolu", "Afyon Antalya Yolu", "Sanliurfa Yolu"
+        gibi yol/cadde adlari baska bolgelerle sahte cakisma yaratmaz.
+        Segment config'te yoksa eski davranisa donup tum SEVK metni taranir;
+        bu, adres satirinda sadece ilce olup alici adinda il gecen eski vakalari
+        desteklemeye devam eder.
+        """
+        if not address:
+            return None, "adres okunamadı"
 
-def _has_word(token: str, ntext: str) -> bool:
-    """Normalize edilmis token, normalize metinde kelime butun olarak gecer mi?"""
-    return bool(token) and re.search(r"\b" + re.escape(token) + r"\b", ntext) is not None
+        terminal = self._terminal_location(address)
+        if terminal and terminal in self.token_regions:
+            return self._resolve_regions(set(self.token_regions[terminal]))
+
+        ntext = normalize(address)
+        for phrase in self.ignore_phrases:  # firma adi vb. gurultuyu temizle
+            ntext = ntext.replace(phrase, " ")
+        found: set[str] = set()
+        for token, regions in self.token_regions.items():
+            if _has_word(token, ntext):
+                found |= regions
+        return self._resolve_regions(found)
 
 
 class DsvMatcher:

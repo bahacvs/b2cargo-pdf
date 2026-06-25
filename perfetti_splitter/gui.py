@@ -78,13 +78,18 @@ def default_output_dir() -> Path:
     return base_dir() / "Birlesik_PDF"
 
 
-def run_split(input_dir: str | Path, shift_name: str | None = None) -> PipelineResult:
+def run_split(
+    input_dir: str | Path,
+    shift_name: str | None = None,
+    progress_callback=None,
+) -> PipelineResult:
     """Bolge haritasi + DSV listesini yukleyip pipeline'i calistirir."""
     region_map = RegionMap.from_yaml(str(config_path()))
     dsv = DsvMatcher.from_yaml(str(dsv_path())) if dsv_path().exists() else None
     return run(
         input_dir, default_output_dir(), region_map,
         shift_name=shift_name, dsv_matcher=dsv,
+        progress_callback=progress_callback,
     )
 
 
@@ -119,8 +124,8 @@ def main() -> int:
 
     root = ctk.CTk()
     root.title("Perfetti Vardiya Ayırıcı")
-    root.geometry("780x680")
-    root.minsize(680, 600)
+    root.geometry("820x740")
+    root.minsize(720, 640)
     try:
         if icon_path().exists():
             root.iconbitmap(str(icon_path()))
@@ -129,6 +134,86 @@ def main() -> int:
 
     last_result: dict[str, PipelineResult | None] = {"r": None}
     FONT = "Segoe UI"
+
+    def open_region_settings() -> None:
+        win = ctk.CTkToplevel(root)
+        win.title("Bölge Ayarları")
+        win.geometry("760x620")
+        win.minsize(620, 480)
+        win.transient(root)
+
+        target = base_dir() / "config" / "regions.yaml"
+        source = config_path()
+        try:
+            initial = source.read_text(encoding="utf-8")
+        except Exception as exc:
+            messagebox.showerror("Bölge ayarları", f"regions.yaml okunamadı:\n{exc}")
+            win.destroy()
+            return
+
+        top = ctk.CTkFrame(win, fg_color="transparent")
+        top.pack(fill="x", padx=16, pady=(14, 8))
+        ctk.CTkLabel(
+            top, text="Bölge Ayarları",
+            font=ctk.CTkFont(family=FONT, size=20, weight="bold"),
+        ).pack(side="left")
+
+        status = ctk.StringVar(value=f"Dosya: {target}")
+        editor = ctk.CTkTextbox(win, wrap="none", font=ctk.CTkFont(family="Consolas", size=12))
+        editor.pack(fill="both", expand=True, padx=16, pady=(0, 8))
+        editor.insert("1.0", initial)
+
+        ctk.CTkLabel(
+            win, textvariable=status, anchor="w", text_color=_MUTED,
+            font=ctk.CTkFont(family=FONT, size=12),
+        ).pack(fill="x", padx=16, pady=(0, 8))
+
+        actions = ctk.CTkFrame(win, fg_color="transparent")
+        actions.pack(fill="x", padx=16, pady=(0, 14))
+
+        def validate_text(text: str) -> RegionMap:
+            import yaml
+
+            data = yaml.safe_load(text) or {}
+            if not isinstance(data, dict):
+                raise ValueError("YAML kök seviyesi bölge listesi olmalı.")
+            return RegionMap(data)
+
+        def save_regions() -> None:
+            text = editor.get("1.0", "end-1c")
+            try:
+                rm = validate_text(text)
+            except Exception as exc:
+                messagebox.showerror("Bölge ayarları", f"YAML doğrulanamadı:\n{exc}")
+                return
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(text, encoding="utf-8")
+            if rm.conflicts:
+                conflicts = ", ".join(sorted(rm.conflicts))
+                status.set(f"Kaydedildi. Çakışma var: {conflicts}")
+            else:
+                status.set("Kaydedildi. Çakışma yok.")
+            messagebox.showinfo("Bölge ayarları", "Bölge ayarları kaydedildi.")
+
+        def validate_regions() -> None:
+            try:
+                rm = validate_text(editor.get("1.0", "end-1c"))
+            except Exception as exc:
+                status.set(f"YAML hatası: {exc}")
+                return
+            if rm.conflicts:
+                status.set("Çakışma var: " + ", ".join(sorted(rm.conflicts)))
+            else:
+                status.set("YAML geçerli. Çakışma yok.")
+
+        ctk.CTkButton(actions, text="Doğrula", height=38, command=validate_regions).pack(
+            side="left", padx=(0, 8)
+        )
+        ctk.CTkButton(actions, text="Kaydet", height=38, command=save_regions).pack(
+            side="left", padx=(0, 8)
+        )
+        ctk.CTkButton(actions, text="Kapat", height=38, fg_color="transparent",
+                      border_width=1, text_color=_ACCENT, command=win.destroy).pack(side="right")
 
     # ---- Ust baslik serisi ----
     header = ctk.CTkFrame(root, fg_color="transparent")
@@ -152,6 +237,11 @@ def main() -> int:
         font=ctk.CTkFont(family=FONT, size=12),
     )
     theme_switch.pack(side="right", anchor="e", pady=8)
+    region_settings_btn = ctk.CTkButton(
+        header, text="Bölge Ayarları", width=130, height=34,
+        command=open_region_settings, font=ctk.CTkFont(family=FONT, size=12),
+    )
+    region_settings_btn.pack(side="right", anchor="e", padx=(0, 12), pady=8)
 
     # ---- Config cakisma uyarisi (varsa) ----
     try:
@@ -212,7 +302,11 @@ def main() -> int:
     status_var = ctk.StringVar(value="Hazır.")
     ctk.CTkLabel(root, textvariable=status_var, text_color=_MUTED,
                  font=ctk.CTkFont(family=FONT, size=12)).pack(padx=24, anchor="w")
-    progress = ctk.CTkProgressBar(root, mode="indeterminate", height=8)
+    live_var = ctk.StringVar(value="")
+    ctk.CTkLabel(root, textvariable=live_var, text_color=_MUTED,
+                 font=ctk.CTkFont(family=FONT, size=12)).pack(padx=24, anchor="w")
+    progress = ctk.CTkProgressBar(root, mode="determinate", height=8)
+    progress.set(0)
 
     # ---- Sonuc: ozet kartlari + bolge listesi ----
     stats = ctk.CTkFrame(root, fg_color="transparent")
@@ -273,6 +367,7 @@ def main() -> int:
         progress.stop()
         progress.pack_forget()
         ayir_btn.configure(state="normal")
+        region_settings_btn.configure(state="normal")
         if error is not None:
             status_var.set("Hata oluştu.")
             messagebox.showerror("Hata", f"İşlem sırasında hata oluştu:\n{error}")
@@ -281,6 +376,7 @@ def main() -> int:
         last_result["r"] = result
         total = sum(result.region_counts.values()) + result.dsv_count + result.error_count
         status_var.set(f"Tamamlandı — {total} evrak işlendi.  Çıktı: {result.out_dir}")
+        live_var.set(f"Okunan: {total}/{total}  |  B2: {sum(result.region_counts.values())}  DSV: {result.dsv_count}  Hata: {result.error_count}")
         render_results(result)
         open_out_btn.configure(state="normal")
         open_report_btn.configure(state="normal")
@@ -288,9 +384,18 @@ def main() -> int:
         open_err_btn.configure(state="normal" if has_err else "disabled")
         rescan_btn.configure(state="normal" if has_err else "disabled")
 
+    def update_progress(done: int, total: int, filename: str) -> None:
+        ratio = done / total if total else 0
+        progress.set(ratio)
+        status_var.set(f"PDF okunuyor: {done}/{total}")
+        live_var.set(f"Okunan: {done}/{total}  |  Son dosya: {filename}")
+
     def worker(input_dir: str, shift_name: str | None) -> None:
+        def progress_cb(done: int, total: int, filename: str) -> None:
+            root.after(0, lambda: update_progress(done, total, filename))
+
         try:
-            result = run_split(input_dir, shift_name)
+            result = run_split(input_dir, shift_name, progress_callback=progress_cb)
             root.after(0, lambda: on_done(result, None))
         except Exception as exc:
             root.after(0, lambda: on_done(None, exc))
@@ -304,11 +409,13 @@ def main() -> int:
         if not pdfs:
             messagebox.showwarning("PDF yok", f"Seçili klasörde PDF bulunamadı:\n{input_dir}")
             return
-        for b in (ayir_btn, open_out_btn, open_report_btn, open_err_btn, rescan_btn):
+        for b in (ayir_btn, region_settings_btn, open_out_btn, open_report_btn, open_err_btn, rescan_btn):
             b.configure(state="disabled")
         status_var.set(f"{len(pdfs)} PDF işleniyor, lütfen bekleyin…")
+        live_var.set(f"Okunan: 0/{len(pdfs)}")
+        progress.configure(mode="determinate")
+        progress.set(0)
         progress.pack(fill="x", padx=24, pady=(2, 6))
-        progress.start()
         threading.Thread(target=worker,
                          args=(input_dir, name_var.get().strip() or None),
                          daemon=True).start()

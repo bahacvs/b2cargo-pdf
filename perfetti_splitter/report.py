@@ -1,36 +1,91 @@
-"""Vardiya ozeti ve hata raporu uretimi."""
+"""Vardiya ozeti ve rapor uretimi."""
 
 from __future__ import annotations
 
 import csv
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Iterable
 
 if TYPE_CHECKING:
     from .parser import Document
 
 
-def write_error_report(error_docs: list["Document"], out_path: str | Path) -> str:
-    """Hatali belgeleri CSV olarak yazar: dosya, pvs, belge_no, bulunan_adres, neden.
+TargetInfo = tuple[str, str, str]
 
-    `bulunan_adres` programin SEVK adresinden okudugu metindir; "bölge
-    bulunamadı" gibi hatalarin nedenini PDF acmadan gormeyi saglar.
-    """
+
+def error_hint(errors: Iterable[str]) -> tuple[str, str]:
+    """Hata listesinden kisa neden ve kullaniciya donuk oneriyi dondurur."""
+    joined = "; ".join(errors)
+    text = joined.lower()
+    if not joined:
+        return "", ""
+    if "pdf okunamad" in text:
+        return "PDF okunamadı", "PDF dosyası bozuk/şifreli olabilir; dosyayı yeniden indirin veya açılıp açılmadığını kontrol edin."
+    if "pvs kodu" in text:
+        return "PVS kodu bulunamadı", "PDF üzerinde PVS numarası okunamıyor; belge formatını veya PDF kalitesini kontrol edin."
+    if "belge numarası" in text:
+        return "Belge numarası bulunamadı", "0700 ile başlayan belge numarası okunamıyor; PDF metnini veya belge formatını kontrol edin."
+    if "adres okunamad" in text:
+        return "Adres okunamadı", "SEVK ADRESI ve FATURA ADRESI etiketleri okunamıyor; PDF formatı farklı olabilir."
+    if "koli adedi" in text:
+        return "Koli adedi okunamadı", "Toplam Koli alanı bulunamadı; belgeyi Hata klasöründen kontrol edip koli bilgisini doğrulayın."
+    if "bölge bulunamad" in text or "bolge bulunamad" in text:
+        return "Bölge bulunamadı", "Teslimat il/ilçesi config/regions.yaml içinde yoksa doğru bölge altına ekleyin."
+    if "belirsiz" in text or "çakışma" in text or "cakisma" in text:
+        return "Bölge çakışması", "Aynı il/ilçe birden fazla bölgede olabilir veya adres yol adı şehir adıyla çakışmış olabilir; config'i kontrol edin."
+    return "Diğer hata", joined
+
+
+def _doc_base_row(doc: "Document") -> list[str]:
+    short_reason, suggestion = error_hint(doc.errors)
+    return [
+        Path(doc.path).name,
+        doc.pvs or "",
+        doc.belge_no or "",
+        doc.recipient or "",
+        "" if doc.koli is None else str(doc.koli),
+        doc.region or "",
+        short_reason,
+        suggestion,
+        doc.address or "",
+        "; ".join(doc.errors),
+    ]
+
+
+def write_error_report(error_docs: list["Document"], out_path: str | Path) -> str:
+    """Hatali belgeleri Excel'de okunabilir CSV olarak yazar."""
     out_path = Path(out_path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(out_path, "w", newline="", encoding="utf-8") as f:
+    with open(out_path, "w", newline="", encoding="utf-8-sig") as f:
         writer = csv.writer(f)
-        writer.writerow(["dosya", "pvs", "belge_no", "bulunan_adres", "neden"])
+        writer.writerow([
+            "dosya", "pvs", "belge_no", "alici", "koli", "bolge",
+            "kisa_neden", "oneri", "bulunan_adres", "teknik_neden",
+        ])
         for doc in error_docs:
-            writer.writerow(
-                [
-                    Path(doc.path).name,
-                    doc.pvs or "",
-                    doc.belge_no or "",
-                    doc.address or "",
-                    "; ".join(doc.errors),
-                ]
+            writer.writerow(_doc_base_row(doc))
+    return str(out_path)
+
+
+def write_shift_report(
+    documents: list["Document"],
+    targets: dict[int, TargetInfo],
+    out_path: str | Path,
+) -> str:
+    """Tum vardiya icin Excel'de acilabilen detay CSV raporu yazar."""
+    out_path = Path(out_path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(out_path, "w", newline="", encoding="utf-8-sig") as f:
+        writer = csv.writer(f)
+        writer.writerow([
+            "durum", "hedef", "kova", "dosya", "pvs", "belge_no", "alici",
+            "koli", "bolge", "kisa_neden", "oneri", "bulunan_adres", "teknik_neden",
+        ])
+        for doc in documents:
+            status, target, bucket = targets.get(
+                id(doc), ("Hata" if doc.errors else "", "", "")
             )
+            writer.writerow([status, target, bucket] + _doc_base_row(doc))
     return str(out_path)
 
 

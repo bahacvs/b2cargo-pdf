@@ -16,6 +16,7 @@ from __future__ import annotations
 import os
 import sys
 import threading
+from datetime import datetime
 from pathlib import Path
 
 from .pipeline import PipelineResult, run
@@ -254,6 +255,9 @@ def main() -> int:
     open_out_btn = ctk.CTkButton(btns, text="Çıktıyı Aç", state="disabled", height=40,
                                  font=ctk.CTkFont(family=FONT, size=12))
     open_out_btn.pack(side="left", expand=True, fill="x", padx=(0, 6))
+    open_report_btn = ctk.CTkButton(btns, text="Vardiya Raporu", state="disabled", height=40,
+                                    font=ctk.CTkFont(family=FONT, size=12))
+    open_report_btn.pack(side="left", expand=True, fill="x", padx=6)
     open_err_btn = ctk.CTkButton(btns, text="Hata Raporu", state="disabled", height=40,
                                  fg_color=_WARN, hover_color="#922b21",
                                  font=ctk.CTkFont(family=FONT, size=12))
@@ -279,6 +283,7 @@ def main() -> int:
         status_var.set(f"Tamamlandı — {total} evrak işlendi.  Çıktı: {result.out_dir}")
         render_results(result)
         open_out_btn.configure(state="normal")
+        open_report_btn.configure(state="normal")
         has_err = bool(result.error_count)
         open_err_btn.configure(state="normal" if has_err else "disabled")
         rescan_btn.configure(state="normal" if has_err else "disabled")
@@ -299,7 +304,7 @@ def main() -> int:
         if not pdfs:
             messagebox.showwarning("PDF yok", f"Seçili klasörde PDF bulunamadı:\n{input_dir}")
             return
-        for b in (ayir_btn, open_out_btn, open_err_btn, rescan_btn):
+        for b in (ayir_btn, open_out_btn, open_report_btn, open_err_btn, rescan_btn):
             b.configure(state="disabled")
         status_var.set(f"{len(pdfs)} PDF işleniyor, lütfen bekleyin…")
         progress.pack(fill="x", padx=24, pady=(2, 6))
@@ -312,6 +317,11 @@ def main() -> int:
         r = last_result["r"]
         if r:
             open_in_explorer(r.out_dir)
+
+    def open_shift_report() -> None:
+        r = last_result["r"]
+        if r:
+            open_in_explorer(str(Path(r.out_dir) / "vardiya_raporu.csv"))
 
     def open_error_report() -> None:
         r = last_result["r"]
@@ -327,11 +337,13 @@ def main() -> int:
             messagebox.showwarning("Hata klasörü yok", f"Bulunamadı:\n{hata_dir}")
             return
         folder_var.set(str(hata_dir))
-        name_var.set("Hata_tekrar")
+        stamp = datetime.now().strftime("%H%M%S")
+        name_var.set(f"Hata_tekrar_{stamp}")
         start()
 
     ayir_btn.configure(command=start)
     open_out_btn.configure(command=open_output)
+    open_report_btn.configure(command=open_shift_report)
     open_err_btn.configure(command=open_error_report)
     rescan_btn.configure(command=rescan_errors)
 

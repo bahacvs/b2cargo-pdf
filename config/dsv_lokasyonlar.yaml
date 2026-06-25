@@ -1,14 +1,35 @@
-# DSV tasiyici lokasyonlari.
+# DSV tasiyici lokasyonlari (resmi DSV teslimat listesinden cikarildi).
 #
-# Bu listedeki il/ilce'ye teslimat yapilan irsaliyeler DSV klasorune; geri
-# kalan her evrak B2 altindaki uygun bolgeye yazilir.
+# Bir irsaliyenin teslimat yeri burada eslesirse DSV klasorune; aksi halde B2
+# altindaki uygun bolgeye yazilir.
 #
-# DSV ayrimi sehir (gerekirse ilce) bazlidir. Asagiya il VEYA ilce adi
-# yazabilirsiniz; eslestirme Turkce karakter/buyuk-kucuk farkina duyarsizdir
-# ve kelime butun olarak aranir.
+# iki kural turu:
+#   iller:    bu illerin TAMAMI (tum ilceler) DSV'dir. -> Istanbul komple.
+#   noktalar: diger illerde yalnizca BELIRLI noktalar DSV'dir. Bir evrak,
+#             teslimat ILCESI 'ilce' ile eslesiyor VE alici adinda 'anahtarlar'
+#             dan biri geciyorsa DSV sayilir. (Sadece il/ilce degil, ISIM de
+#             eslesmeli - ayni ilcedeki DSV-disi musteriler B2'ye gider.)
 #
-# NOT: Bu liste resmi DSV teslimat listesi (Excel) ile guncellenecektir.
-# Liste exe yaninda durur; degistirmek icin programi yeniden derlemeye gerek
-# YOKTUR - bu dosyayi Not Defteri ile acip kaydetmek yeterlidir.
+# Eslestirme Turkce karakter/buyuk-kucuk duyarsizdir, kelime butun aranir.
+# Bu dosya exe yaninda durur; degistirmek icin yeniden derleme GEREKMEZ.
 
-- İstanbul
+iller:
+  - İstanbul
+
+noktalar:
+  # Bursa / Nilüfer
+  - ilce: Nilüfer
+    anahtarlar: [BURSA BOLGE, LAMI]
+  # Kocaeli / Gebze
+  - ilce: Gebze
+    anahtarlar: [METRO, MIGROS]
+  # Kocaeli / Çayırova
+  - ilce: Çayırova
+    anahtarlar: [CARREFOUR, TOYPA]
+  # Kocaeli / İzmit
+  - ilce: İzmit
+    anahtarlar: [YEMEK SEPETI, YEMEKSEPETI, BANABI]
+  # Yalova
+  - ilce: Yalova
+    anahtarlar: [NIGAR]
+  # NOT: Edirne/PIRAMIT B2 siparisidir; DSV'ye DAHIL EDILMEDI.

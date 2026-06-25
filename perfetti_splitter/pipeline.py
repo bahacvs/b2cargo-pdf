@@ -15,7 +15,7 @@ from typing import Optional
 from . import report
 from .extractor import extract_text
 from .parser import Document, parse_document
-from .regions import LocationMatcher, RegionMap
+from .regions import DsvMatcher, RegionMap
 from .splitter import copy_docs, koli_bucket
 
 
@@ -63,7 +63,7 @@ def run(
     out_base: str | Path,
     region_map: RegionMap,
     shift_name: Optional[str] = None,
-    dsv_matcher: Optional[LocationMatcher] = None,
+    dsv_matcher: Optional[DsvMatcher] = None,
 ) -> PipelineResult:
     """Pipeline'i bastan sona calistirir ve sonuc dondurur.
 

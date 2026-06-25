@@ -11,7 +11,7 @@ import sys
 from pathlib import Path
 
 from .pipeline import run
-from .regions import LocationMatcher, RegionMap
+from .regions import DsvMatcher, RegionMap
 
 # config/*.yaml -> repo kokunden goreceli varsayilan yollar
 _CONFIG_DIR = Path(__file__).resolve().parent.parent / "config"
@@ -60,7 +60,7 @@ def main(argv: list[str] | None = None) -> int:
         )
 
     dsv_matcher = (
-        LocationMatcher.from_yaml(args.dsv) if Path(args.dsv).exists() else None
+        DsvMatcher.from_yaml(args.dsv) if Path(args.dsv).exists() else None
     )
 
     result = run(

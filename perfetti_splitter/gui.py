@@ -17,7 +17,7 @@ import threading
 from pathlib import Path
 
 from .pipeline import PipelineResult, run
-from .regions import LocationMatcher, RegionMap
+from .regions import DsvMatcher, RegionMap
 
 
 # --- Tk'dan bagimsiz yardimcilar (test edilebilir) -------------------------
@@ -70,7 +70,7 @@ def default_output_dir() -> Path:
 def run_split(input_dir: str | Path, shift_name: str | None = None) -> PipelineResult:
     """Bolge haritasi + DSV listesini yukleyip pipeline'i calistirir."""
     region_map = RegionMap.from_yaml(str(config_path()))
-    dsv = LocationMatcher.from_yaml(str(dsv_path())) if dsv_path().exists() else None
+    dsv = DsvMatcher.from_yaml(str(dsv_path())) if dsv_path().exists() else None
     return run(
         input_dir, default_output_dir(), region_map,
         shift_name=shift_name, dsv_matcher=dsv,

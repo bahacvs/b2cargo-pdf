@@ -7,7 +7,7 @@ from pypdf import PdfReader
 
 from perfetti_splitter.parser import Document
 from perfetti_splitter.pipeline import run
-from perfetti_splitter.regions import LocationMatcher, RegionMap
+from perfetti_splitter.regions import DsvMatcher, RegionMap
 from perfetti_splitter.splitter import (
     copy_docs,
     doc_filename,
@@ -24,13 +24,25 @@ def test_koli_bucket():
     assert koli_bucket(1) == "Dökme"
 
 
-def test_location_matcher():
-    m = LocationMatcher(["İstanbul", "Bursa", "Yalova"])
-    assert m.matches("A101 ISTANBUL Adres: ... Esenyurt/ISTANBUL/Turkiye")
-    assert m.matches("... Nilufer/BURSA/Turkiye")
-    assert not m.matches("A101 ADANA Adres: Merkez/ADANA/Turkiye")
+def test_dsv_matcher_il_bazli():
+    # Istanbul komple: teslimat ili Istanbul ise DSV.
+    m = DsvMatcher(iller=["İstanbul"], noktalar=[])
+    assert m.matches("A101 ISTANBUL Adres: ... Esenyurt/ISTANBUL/Türkiye")
+    assert not m.matches("A101 ADANA Adres: Merkez/ADANA/Türkiye")
     assert not m.matches(None)
-    assert not LocationMatcher([]).matches("ISTANBUL")  # bos liste -> False
+    # Sirket adinda 'Istanbul' gecse de teslimat ili Ankara ise DSV degil.
+    assert not m.matches("ISTANBUL GIDA A.S. Adres: Cankaya/ANKARA/Türkiye")
+
+
+def test_dsv_matcher_ilce_isim():
+    # Diger iller: ilce + isim birlikte eslesmeli.
+    m = DsvMatcher(iller=["İstanbul"], noktalar=[{"ilce": "Gebze", "anahtarlar": ["MIGROS", "METRO"]}])
+    # Gebze + MIGROS -> DSV
+    assert m.matches("MIGROS TICARET A.S. Adres: ... Gebze/KOCAELİ/Türkiye")
+    # Gebze ama DSV-disi musteri -> DSV degil (B2)
+    assert not m.matches("BAZ GIDA LTD Adres: ... Gebze/KOCAELİ/Türkiye")
+    # MIGROS ama baska ilce (Ankara) -> DSV degil
+    assert not m.matches("MIGROS TICARET A.S. Adres: ... Cankaya/ANKARA/Türkiye")
 
 
 @pytest.fixture
@@ -106,7 +118,7 @@ def test_end_to_end_pipeline(tmp_path, make_pdf):
             "Aytop": ["İstanbul", "Bilecik"],
         }
     )
-    dsv = LocationMatcher(["İstanbul", "Bursa", "Yalova"])
+    dsv = DsvMatcher(iller=["İstanbul"], noktalar=[])
     result = run(
         gelen, tmp_path / "out", region_map,
         shift_name="TestVardiya", dsv_matcher=dsv,

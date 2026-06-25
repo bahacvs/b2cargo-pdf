@@ -94,30 +94,58 @@ class RegionMap:
         return next(iter(found)), None
 
 
-class LocationMatcher:
-    """Bir lokasyon listesi (il/ilce) -> bir adres metninde gecip gecmedigi.
+# Adresin sonundaki "Ilce/Il/Turkiye" kalibindan il (son slash'tan onceki) cikar.
+_PROVINCE_RE = re.compile(r"([^/\n]+)/\s*t[uü]rk[iİ]ye", re.IGNORECASE)
 
-    DSV ayrimi icin kullanilir: adreste listedeki lokasyonlardan biri kelime
-    butun olarak (Turkce-duyarsiz) geciyorsa True. Bos liste -> her zaman False.
+
+def _has_word(token: str, ntext: str) -> bool:
+    """Normalize edilmis token, normalize metinde kelime butun olarak gecer mi?"""
+    return bool(token) and re.search(r"\b" + re.escape(token) + r"\b", ntext) is not None
+
+
+class DsvMatcher:
+    """Bir irsaliyenin DSV'ye mi gidecegini belirler.
+
+    İki kural:
+      * iller   : teslimat ili (adresin .../Il/Türkiye kalibindaki il) bu kumede
+                  ise DSV (orn. Istanbul komple).
+      * noktalar: (ilce, anahtarlar) ciftleri. Teslimat ilcesi 'ilce' ile gecer
+                  VE alici adinda 'anahtarlar'dan biri gecerse DSV. Boylece ayni
+                  ilcedeki DSV-disi musteriler B2'de kalir.
+    Eslestirme normalize (Turkce-duyarsiz) ve kelime-butun yapilir.
     """
 
-    def __init__(self, locations: list[str]):
-        self.tokens = sorted({normalize(x) for x in (locations or []) if x and normalize(x)})
+    def __init__(self, iller: list[str], noktalar: list[dict] | None = None):
+        self.iller = {normalize(x) for x in (iller or []) if normalize(x)}
+        self.noktalar: list[tuple[str, list[str]]] = []
+        for n in noktalar or []:
+            ilce = normalize(n.get("ilce", ""))
+            keys = [normalize(k) for k in n.get("anahtarlar", []) if normalize(k)]
+            if ilce and keys:
+                self.noktalar.append((ilce, keys))
 
     @classmethod
-    def from_yaml(cls, path: str | Path) -> "LocationMatcher":
+    def from_yaml(cls, path: str | Path) -> "DsvMatcher":
         with open(path, encoding="utf-8") as f:
-            data = yaml.safe_load(f) or []
-        if isinstance(data, dict):  # bolge->liste bicimi de kabul edilir
-            items = [c for v in data.values() for c in (v or [])]
-        else:
-            items = list(data)
-        return cls(items)
+            data = yaml.safe_load(f) or {}
+        if isinstance(data, list):  # eski biçim: düz il listesi
+            return cls(iller=data, noktalar=[])
+        return cls(iller=data.get("iller", []), noktalar=data.get("noktalar", []))
+
+    def province(self, address: Optional[str]) -> str:
+        """Adresteki teslimat ilini (normalize) dondurur; yoksa ''."""
+        if not address:
+            return ""
+        m = _PROVINCE_RE.search(address)
+        return normalize(m.group(1).strip()) if m else ""
 
     def matches(self, address: Optional[str]) -> bool:
-        if not address or not self.tokens:
+        if not address:
             return False
+        if self.province(address) in self.iller:  # il bazli komple (Istanbul)
+            return True
         ntext = normalize(address)
-        return any(
-            re.search(r"\b" + re.escape(t) + r"\b", ntext) for t in self.tokens
-        )
+        for ilce, keys in self.noktalar:  # ilce + isim eslesmesi
+            if _has_word(ilce, ntext) and any(_has_word(k, ntext) for k in keys):
+                return True
+        return False

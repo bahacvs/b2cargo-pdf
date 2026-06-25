@@ -7,16 +7,21 @@ Gelen klasordeki her PDF -> metin cikar -> alanlari coz -> bolge tespit et
 from __future__ import annotations
 
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from datetime import datetime
+import os
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Optional
 
 from . import report
 from .extractor import extract_text
 from .parser import Document, parse_document
 from .regions import DsvMatcher, RegionMap
 from .splitter import copy_docs, koli_bucket
+
+
+ProgressCallback = Callable[[int, int, str], None]
 
 
 @dataclass
@@ -35,27 +40,67 @@ def _list_pdfs(input_dir: Path) -> list[Path]:
     return sorted(p for p in input_dir.iterdir() if p.suffix.lower() == ".pdf")
 
 
-def process_documents(paths: list[Path], region_map: RegionMap) -> list[Document]:
-    """Her PDF icin Document uretir (metin, alanlar, bolge/hata)."""
-    docs: list[Document] = []
-    for path in paths:
-        try:
-            text = extract_text(str(path))
-        except Exception as exc:  # bozuk/okunamayan PDF -> Hata
-            doc = Document(path=str(path))
-            doc.errors.append(f"PDF okunamadı: {exc}")
-            docs.append(doc)
-            continue
+def _process_one_document(path: Path, region_map: RegionMap) -> Document:
+    try:
+        text = extract_text(str(path))
+    except Exception as exc:  # bozuk/okunamayan PDF -> Hata
+        doc = Document(path=str(path))
+        doc.errors.append(f"PDF okunamadı: {exc}")
+        return doc
 
-        doc = parse_document(str(path), text)
-        if doc.ok:  # zorunlu alanlar tamam -> bolge dene
-            region, err = region_map.detect(doc.address)
-            if err:
-                doc.errors.append(err)
-            else:
-                doc.region = region
-        docs.append(doc)
-    return docs
+    doc = parse_document(str(path), text)
+    if doc.ok:  # zorunlu alanlar tamam -> bolge dene
+        region, err = region_map.detect(doc.address)
+        if err:
+            doc.errors.append(err)
+        else:
+            doc.region = region
+    return doc
+
+
+def _worker_count(total: int, requested: int | None = None) -> int:
+    if total <= 1:
+        return 1
+    if requested is not None:
+        return max(1, min(total, requested))
+    cpu = os.cpu_count() or 1
+    return max(1, min(total, 8, cpu + 2))
+
+
+def process_documents(
+    paths: list[Path],
+    region_map: RegionMap,
+    progress_callback: ProgressCallback | None = None,
+    max_workers: int | None = None,
+) -> list[Document]:
+    """Her PDF icin Document uretir; okuma islemini paralel hizlandirir."""
+    total = len(paths)
+    if total == 0:
+        return []
+
+    workers = _worker_count(total, max_workers)
+    docs: list[Document | None] = [None] * total
+
+    if workers == 1:
+        for index, path in enumerate(paths):
+            docs[index] = _process_one_document(path, region_map)
+            if progress_callback:
+                progress_callback(index + 1, total, path.name)
+    else:
+        with ThreadPoolExecutor(max_workers=workers) as executor:
+            futures = {
+                executor.submit(_process_one_document, path, region_map): (index, path)
+                for index, path in enumerate(paths)
+            }
+            completed = 0
+            for future in as_completed(futures):
+                index, path = futures[future]
+                docs[index] = future.result()
+                completed += 1
+                if progress_callback:
+                    progress_callback(completed, total, path.name)
+
+    return [doc for doc in docs if doc is not None]
 
 
 def run(
@@ -64,6 +109,7 @@ def run(
     region_map: RegionMap,
     shift_name: Optional[str] = None,
     dsv_matcher: Optional[DsvMatcher] = None,
+    progress_callback: ProgressCallback | None = None,
 ) -> PipelineResult:
     """Pipeline'i bastan sona calistirir ve sonuc dondurur.
 
@@ -82,7 +128,7 @@ def run(
     out_dir = Path(out_base) / shift_name
 
     paths = _list_pdfs(input_dir)
-    documents = process_documents(paths, region_map)
+    documents = process_documents(paths, region_map, progress_callback=progress_callback)
 
     # DSV once: teslimat yeri DSV listesindeyse DSV'ye (duz); degilse B2'de
     # bolge + koli kovasina (Palet/Dökme). Koli okunamayan B2 evraki Hata'ya.

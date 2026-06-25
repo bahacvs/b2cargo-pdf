@@ -9,10 +9,11 @@ from perfetti_splitter.regions import RegionMap, normalize
 def region_map():
     return RegionMap(
         {
-            "Adana": ["Adana", "Mersin", "Gaziantep", "Kahramanmaraş"],
+            "Adana": ["Adana", "Mersin", "Gaziantep", "Kahramanmaraş", "Şanlıurfa"],
             "Ankara": ["Ankara", "Konya", "Niğde", "Bilecik"],
-            "Antalya": ["Antalya", "Alanya"],
-            "Aytop": ["İstanbul", "Bursa", "Bilecik"],
+            "Antalya": ["Antalya", "Alanya", "Burdur"],
+            "Aytop": ["İstanbul", "Bursa", "Bilecik", "Afyonkarahisar", "Çayırova"],
+            "Diyarbakir": ["Diyarbakır"],
             "Izmir": ["İzmir", "Muğla", "Fethiye"],
             "Erzurum": ["Erzurum", "Van"],
         }
@@ -47,6 +48,39 @@ def test_detect_district_maps_to_region(region_map):
     # Fethiye (ilce) -> Izmir bolgesi
     region, err = region_map.detect("MIGROS FETHIYE DEPO")
     assert region == "Izmir"
+
+
+def test_terminal_delivery_location_beats_road_name_collisions(region_map):
+    cases = [
+        (
+            "OZDILEK A.S - NILUFER Adres: ALAADDINBEY MAH. IZMIR YOLU CAD. "
+            "Nilüfer/BURSA/Türkiye",
+            "Aytop",
+        ),
+        (
+            "OZDILEK A.S. - AFYON KARAHISAR SB. Adres: AFYON ANTALYA YOLU "
+            "Merkez/AFYONKARAHISAR/Türkiye",
+            "Aytop",
+        ),
+        (
+            "GETİR-DİYARBAKIR MERKEZ DEPO Adres: Şanlıurfa Yolu 20.Km "
+            "Bağlar/DIYARBAKIR/Türkiye",
+            "Diyarbakir",
+        ),
+        (
+            "A101 BURDUR Adres: Kışla Mah. Ankara Bulvarı No:33/1 "
+            "Merkez/BURDUR/Türkiye",
+            "Antalya",
+        ),
+        (
+            "BIZIM TOPTAN SATIS - SEKERPINAR DM Adres: FEVZI CAKMAK CD. "
+            "SEKERPINAR MH./CAYIROVA/Türkiye",
+            "Aytop",
+        ),
+    ]
+    for address, expected in cases:
+        region, err = region_map.detect(address)
+        assert (region, err) == (expected, None)
 
 
 def test_unknown_city_is_error(region_map):

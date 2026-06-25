@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import csv
+import re
 from pathlib import Path
 from typing import TYPE_CHECKING, Iterable
 
@@ -11,9 +12,17 @@ if TYPE_CHECKING:
 
 
 TargetInfo = tuple[str, str, str]
+_LOCATION_RE = re.compile(r"([^/\n]+)/\s*t[uü]rk[iİ]ye", re.IGNORECASE)
 
 
-def error_hint(errors: Iterable[str]) -> tuple[str, str]:
+def _terminal_location(address: str | None) -> str:
+    if not address:
+        return ""
+    matches = _LOCATION_RE.findall(address)
+    return matches[-1].strip() if matches else ""
+
+
+def error_hint(errors: Iterable[str], address: str | None = None) -> tuple[str, str]:
     """Hata listesinden kisa neden ve kullaniciya donuk oneriyi dondurur."""
     joined = "; ".join(errors)
     text = joined.lower()
@@ -30,14 +39,22 @@ def error_hint(errors: Iterable[str]) -> tuple[str, str]:
     if "koli adedi" in text:
         return "Koli adedi okunamadı", "Toplam Koli alanı bulunamadı; belgeyi Hata klasöründen kontrol edip koli bilgisini doğrulayın."
     if "bölge bulunamad" in text or "bolge bulunamad" in text:
+        location = _terminal_location(address)
+        if location:
+            return (
+                "Bölge bulunamadı",
+                f"Teslimat yeri '{location}' config/regions.yaml içinde yoksa doğru bölge altına ekleyin.",
+            )
         return "Bölge bulunamadı", "Teslimat il/ilçesi config/regions.yaml içinde yoksa doğru bölge altına ekleyin."
     if "belirsiz" in text or "çakışma" in text or "cakisma" in text:
-        return "Bölge çakışması", "Aynı il/ilçe birden fazla bölgede olabilir veya adres yol adı şehir adıyla çakışmış olabilir; config'i kontrol edin."
+        location = _terminal_location(address)
+        detail = f" Teslimat yeri: {location}." if location else ""
+        return "Bölge çakışması", "Aynı il/ilçe birden fazla bölgede olabilir veya adres yol adı şehir adıyla çakışmış olabilir; config'i kontrol edin." + detail
     return "Diğer hata", joined
 
 
 def _doc_base_row(doc: "Document") -> list[str]:
-    short_reason, suggestion = error_hint(doc.errors)
+    short_reason, suggestion = error_hint(doc.errors, doc.address)
     return [
         Path(doc.path).name,
         doc.pvs or "",

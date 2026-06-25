@@ -92,17 +92,23 @@ def run(
         lambda: defaultdict(list)
     )
     error_docs: list[Document] = []
+    doc_targets: dict[int, report.TargetInfo] = {}
     for doc in documents:
         if dsv_matcher is not None and dsv_matcher.matches(doc.address):
             dsv_docs.append(doc)
+            doc_targets[id(doc)] = ("DSV", "DSV", "")
         elif doc.region:
             if doc.koli is None:
                 doc.errors.append("koli adedi okunamadı")
                 error_docs.append(doc)
+                doc_targets[id(doc)] = ("Hata", "Hata", "")
             else:
-                grouped[doc.region][koli_bucket(doc.koli)].append(doc)
+                bucket = koli_bucket(doc.koli)
+                grouped[doc.region][bucket].append(doc)
+                doc_targets[id(doc)] = ("B2", doc.region, bucket)
         else:
             error_docs.append(doc)
+            doc_targets[id(doc)] = ("Hata", "Hata", "")
 
     written: dict[str, list[str]] = {}
     # B2: her bolge -> "Bolge (N evrak)" / Palet|Dökme alt klasorleri.
@@ -124,6 +130,10 @@ def run(
         report.write_error_report(error_docs, hata_dir / "Hata_raporu.csv")
 
     # Raporlar.
+    report_path = report.write_shift_report(
+        documents, doc_targets, out_dir / "vardiya_raporu.csv"
+    )
+    written["Rapor"] = [report_path]
     region_counts = {
         r: sum(len(d) for d in buckets.values()) for r, buckets in grouped.items()
     }

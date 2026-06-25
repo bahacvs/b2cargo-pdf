@@ -105,16 +105,19 @@ def run(
             error_docs.append(doc)
 
     written: dict[str, list[str]] = {}
-    # B2: her bolge -> Palet/Dökme alt klasorleri.
+    # B2: her bolge -> "Bolge (N evrak)" / Palet|Dökme alt klasorleri.
     for region, buckets in grouped.items():
+        region_total = sum(len(d) for d in buckets.values())
+        region_dir = out_dir / "B2" / f"{region} ({region_total} evrak)"
         for bucket, docs in buckets.items():
-            files = copy_docs(docs, out_dir / "B2" / region / bucket)
+            files = copy_docs(docs, region_dir / bucket)
             written[f"B2/{region}/{bucket}"] = files
-    # DSV: duz tek klasor.
+    # DSV: duz tek klasor (yaninda evrak sayisi).
     if dsv_docs:
-        written["DSV"] = copy_docs(dsv_docs, out_dir / "DSV")
+        written["DSV"] = copy_docs(dsv_docs, out_dir / f"DSV ({len(dsv_docs)} evrak)")
 
     # Hata klasoru: basarisiz PDF'ler ayri ayri + neden raporu icinde.
+    # (Klasor adi sabit "Hata" - arayuzdeki 'Tekrar Tara'/'Rapor' butonlari buna bakar.)
     if error_docs:
         hata_dir = out_dir / "Hata"
         written["Hata"] = copy_docs(error_docs, hata_dir)

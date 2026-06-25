@@ -118,14 +118,14 @@ def test_end_to_end_pipeline(tmp_path, make_pdf):
     assert result.error_count == 3  # nokoli + unknown + bilecik cakismasi
 
     out_dir = Path(result.out_dir)
-    # B2 bolge -> Palet/Dökme alt klasorleri
-    assert (out_dir / "B2" / "Adana" / "Palet" / "A101 ADANA - PVS0001.pdf").exists()
-    assert (out_dir / "B2" / "Adana" / "Dökme" / "A101 MERSIN - PVS0002.pdf").exists()
-    assert (out_dir / "B2" / "Ankara" / "Palet" / "A101 ANKARA - PVS0003.pdf").exists()
-    # DSV duz (palet/dokme yok)
-    assert (out_dir / "DSV" / "A101 ISTANBUL - PVS0006.pdf").exists()
-    assert not (out_dir / "DSV" / "Palet").exists()
-    # Hata: koli okunamayan dahil 3 evrak
+    # B2 bolge -> "Bolge (N evrak)" / Palet|Dökme alt klasorleri
+    assert (out_dir / "B2" / "Adana (2 evrak)" / "Palet" / "A101 ADANA - PVS0001.pdf").exists()
+    assert (out_dir / "B2" / "Adana (2 evrak)" / "Dökme" / "A101 MERSIN - PVS0002.pdf").exists()
+    assert (out_dir / "B2" / "Ankara (1 evrak)" / "Palet" / "A101 ANKARA - PVS0003.pdf").exists()
+    # DSV duz (yaninda sayi), palet/dokme yok
+    assert (out_dir / "DSV (1 evrak)" / "A101 ISTANBUL - PVS0006.pdf").exists()
+    assert not (out_dir / "DSV (1 evrak)" / "Palet").exists()
+    # Hata klasoru sabit adli
     assert len(list((out_dir / "Hata").glob("*.pdf"))) == 3
     assert (out_dir / "Hata" / "Hata_raporu.csv").exists()
     assert (out_dir / "ozet.txt").exists()

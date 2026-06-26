@@ -157,13 +157,14 @@ def run(
             doc_targets[id(doc)] = ("Hata", "Hata", "")
 
     written: dict[str, list[str]] = {}
-    # B2: her bolge -> "Bolge (N evrak)" / Palet|Dökme alt klasorleri.
+    # B2: her bolge -> "Bolge (N evrak)" / "Palet|Dökme (N evrak)".
     for region, buckets in grouped.items():
         region_total = sum(len(d) for d in buckets.values())
         region_dir = out_dir / "B2" / f"{region} ({region_total} evrak)"
         for bucket, docs in buckets.items():
-            files = copy_docs(docs, region_dir / bucket)
-            written[f"B2/{region}/{bucket}"] = files
+            bucket_dir_name = f"{bucket} ({len(docs)} evrak)"
+            files = copy_docs(docs, region_dir / bucket_dir_name)
+            written[f"B2/{region}/{bucket_dir_name}"] = files
     # DSV: duz tek klasor (yaninda evrak sayisi).
     if dsv_docs:
         written["DSV"] = copy_docs(dsv_docs, out_dir / f"DSV ({len(dsv_docs)} evrak)")

@@ -139,7 +139,8 @@ def test_extract_koli():
 
 def test_extract_brut_agirlik():
     assert extract_brut_agirlik("Toplam Brüt Ağırlık: 1.234,50 KG") == Decimal("1234.50")
-    assert extract_brut_agirlik("Toplam Brut Agirlik: 12.5") == Decimal("12.5")
+    assert extract_brut_agirlik("Toplam Brut Agirlik: 12.5") == Decimal("12")
+    assert extract_brut_agirlik("Toplam Brut Agirlik: 794.236 kg") == Decimal("794")
     assert extract_brut_agirlik("Toplam Brut Agirlik: 500 g") == Decimal("0.5")
     assert extract_brut_agirlik("Toplam Brüt Ağırlık: 54 GR") == Decimal("0.054")
     assert extract_brut_agirlik("agirlik bilgisi yok") is None

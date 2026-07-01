@@ -140,7 +140,10 @@ def test_extract_koli():
 def test_extract_brut_agirlik():
     assert extract_brut_agirlik("Toplam Brüt Ağırlık: 1.234,50 KG") == Decimal("1234.50")
     assert extract_brut_agirlik("Toplam Brut Agirlik: 12.5") == Decimal("12.5")
+    assert extract_brut_agirlik("Toplam Brut Agirlik: 500 g") == Decimal("0.5")
+    assert extract_brut_agirlik("Toplam Brüt Ağırlık: 54 GR") == Decimal("0.054")
     assert extract_brut_agirlik("agirlik bilgisi yok") is None
+
 
 def test_parse_document_sets_koli(tmp_path, make_pdf):
     pdf = make_pdf(tmp_path / "k.pdf", il="ADANA", koli=15)
@@ -163,4 +166,3 @@ def test_extract_destination_excludes_sender_and_billing():
     assert "TRABZON" in dest.upper()
     assert "ISTANBUL" not in dest.upper()
     assert "ALEMDAG" not in dest.upper()  # Vergi Dairesi satiri elendi
-

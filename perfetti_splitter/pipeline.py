@@ -1,4 +1,4 @@
-﻿"""Tum akisi orkestre eden pipeline.
+"""Tum akisi orkestre eden pipeline.
 
 Gelen klasordeki her PDF -> metin cikar -> alanlari coz -> bolge tespit et
 -> bolgeye gore grupla -> bolge basina tek PDF + Hata PDF + raporlar.
@@ -42,9 +42,9 @@ def _list_pdfs(input_dir: Path) -> list[Path]:
 
 
 def _format_kg(value: Decimal) -> str:
-    value = value.quantize(Decimal("0.01"))
-    text = format(value, "f").rstrip("0").rstrip(".")
-    return text or "0"
+    value = value.quantize(Decimal("0.001"))
+    text = format(value, ",f").rstrip("0").rstrip(".")
+    return text.replace(",", "_").replace(".", ",").replace("_", ".") or "0"
 
 def _process_one_document(path: Path, region_map: RegionMap) -> Document:
     try:
@@ -207,4 +207,3 @@ def run(
         written_files=written,
         summary=summary,
     )
-

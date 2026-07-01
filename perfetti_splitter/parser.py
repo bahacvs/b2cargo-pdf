@@ -1,4 +1,4 @@
-﻿"""Irsaliye metninden alan cikarimi.
+"""Irsaliye metninden alan cikarimi.
 
 Bir dosya = bir irsaliye oldugu icin belge sinir tespiti gerekmez. Her dosya
 icin PVS kodu, belge numarasi ve SEVK (teslimat) adresi cikarilir. Zorunlu
@@ -34,9 +34,9 @@ PVS_RE = re.compile(r"PVS\d{4}\S*", re.IGNORECASE)
 BELGE_RE = re.compile(r"0700\d+")
 # Toplam koli adedi, orn: "Toplam Koli: 24"
 KOLI_RE = re.compile(r"Toplam\s*Koli\s*:?\s*(\d+)", re.IGNORECASE)
-# Toplam brut agirlik, orn: "Toplam Brüt Ağırlık: 1.234,50"
+# Toplam brut agirlik, orn: "Toplam Brüt Ağırlık: 1.234,50 KG"
 BRUT_AGIRLIK_RE = re.compile(
-    r"toplam\s*brut\s*agirl(?:ik|igi)\s*:?\s*([0-9][0-9.,]*)",
+    r"toplam\s*brut\s*agirl(?:ik|igi)\s*:?\s*([0-9][0-9.,]*)\s*(kg|kilogram|g|gr|gram)?\b",
     re.IGNORECASE,
 )
 # Adres bloklarinin etiketleri.
@@ -176,9 +176,17 @@ def _parse_decimal(value: str) -> Optional[Decimal]:
 
 
 def extract_brut_agirlik(text: str) -> Optional[Decimal]:
-    """'Toplam Brüt Ağırlık' degerini Decimal olarak dondurur; yoksa None."""
+    """'Toplam Brüt Ağırlık' degerini kg cinsinden Decimal dondurur."""
     m = BRUT_AGIRLIK_RE.search(normalize(text))
-    return _parse_decimal(m.group(1)) if m else None
+    if not m:
+        return None
+    value = _parse_decimal(m.group(1))
+    if value is None:
+        return None
+    unit = m.group(2) or "kg"
+    if unit in {"g", "gr", "gram"}:
+        return value / Decimal("1000")
+    return value
 
 def parse_document(path: str, text: str) -> Document:
     """Metinden bir Document olusturur; zorunlu alan eksikse hata ekler."""
@@ -207,4 +215,3 @@ def parse_document(path: str, text: str) -> Document:
     doc.brut_agirlik = extract_brut_agirlik(text)
 
     return doc
-

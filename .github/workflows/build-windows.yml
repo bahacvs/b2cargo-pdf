@@ -1,11 +1,12 @@
 name: Windows EXE Derle
-# Rebuild marker: 2026-07-01 professional-console-design
+# Rebuild marker: 2026-07-02 b2cargo-design-system-ui
 
 # Teknik olmayan kullanici icin tek dosya .exe uretir.
 # Tetik: bu dosya main'e her yazildiginda calisir ve KODU feature branch'ten
 # checkout edip derler (kaynak main'e merge edilmez). Yeniden derlemek icin
 # bu dosyada kucuk bir degisiklik yapip main'e yazmak yeterli.
-# Surum notu: Modern arayuz (CustomTkinter) + acik/koyu tema + simge.
+# Surum notu: B2Cargo tasarim sistemi arayuzu (CustomTkinter) + gomulu
+# Manrope/JetBrains Mono fontlari + acik/koyu tema + iki logo.
 
 on:
   workflow_dispatch:
@@ -53,6 +54,9 @@ jobs:
           --add-data "config/regions.yaml;config"
           --add-data "config/dsv_lokasyonlar.yaml;config"
           --add-data "assets/app.ico;assets"
+          --add-data "assets/fonts;assets/fonts"
+          --add-data "assets/logo-mark.png;assets"
+          --add-data "assets/logo-wordmark.png;assets"
           launch_gui.py
 
       - name: Dagitim klasoru hazirla

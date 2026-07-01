@@ -1,12 +1,13 @@
 """Bolge klasoru + ayri PDF cikti ve uctan uca pipeline testleri."""
 
+from decimal import Decimal
 from pathlib import Path
 
 import pytest
 from pypdf import PdfReader
 
 from perfetti_splitter.parser import Document
-from perfetti_splitter.pipeline import run
+from perfetti_splitter.pipeline import _format_kg, run
 from perfetti_splitter.regions import DsvMatcher, RegionMap
 from perfetti_splitter.splitter import (
     copy_docs,
@@ -22,6 +23,12 @@ def test_koli_bucket():
     assert koli_bucket(24) == "Palet"
     assert koli_bucket(8) == "Dökme"
     assert koli_bucket(1) == "Dökme"
+
+
+def test_format_kg_uses_turkish_separators():
+    assert _format_kg(Decimal("16354.054")) == "16.354,054"
+    assert _format_kg(Decimal("100.500")) == "100,5"
+    assert _format_kg(Decimal("200")) == "200"
 
 
 def test_dsv_matcher_il_bazli():
@@ -104,7 +111,7 @@ def test_end_to_end_pipeline(tmp_path, make_pdf):
     # Adana Palet (koli 24) + Adana Dokme (koli 5), Ankara Palet, DSV (Istanbul),
     # koli okunamayan (Hata), bilinmeyen (Hata), Bilecik cakismasi (Hata).
     make_pdf(gelen / "a1.pdf", il="ADANA", pvs="PVS0001", koli=24)
-    make_pdf(gelen / "a2.pdf", il="MERSIN", pvs="PVS0002", koli=5)
+    make_pdf(gelen / "a2.pdf", il="MERSIN", pvs="PVS0002", koli=5, brut_agirlik="500 g")
     make_pdf(gelen / "ank.pdf", il="ANKARA", pvs="PVS0003", koli=9)
     make_pdf(gelen / "ist.pdf", il="ISTANBUL", pvs="PVS0006", koli=12)  # -> DSV
     make_pdf(gelen / "nokoli.pdf", il="ADANA", pvs="PVS0007", koli=None)  # -> Hata
@@ -131,8 +138,8 @@ def test_end_to_end_pipeline(tmp_path, make_pdf):
 
     out_dir = Path(result.out_dir)
     # B2 bolge -> "Bolge (N evrak, X kg)" / "Palet|Dökme (N evrak)" alt klasorleri
-    assert (out_dir / "B2" / "Adana (2 evrak, 200 kg)" / "Palet (1 evrak)" / "A101 ADANA - PVS0001.pdf").exists()
-    assert (out_dir / "B2" / "Adana (2 evrak, 200 kg)" / "Dökme (1 evrak)" / "A101 MERSIN - PVS0002.pdf").exists()
+    assert (out_dir / "B2" / "Adana (2 evrak, 100,5 kg)" / "Palet (1 evrak)" / "A101 ADANA - PVS0001.pdf").exists()
+    assert (out_dir / "B2" / "Adana (2 evrak, 100,5 kg)" / "Dökme (1 evrak)" / "A101 MERSIN - PVS0002.pdf").exists()
     assert (out_dir / "B2" / "Ankara (1 evrak, 100 kg)" / "Palet (1 evrak)" / "A101 ANKARA - PVS0003.pdf").exists()
     # DSV duz (yaninda sayi), palet/dokme yok
     assert (out_dir / "DSV (1 evrak)" / "A101 ISTANBUL - PVS0006.pdf").exists()
@@ -146,4 +153,3 @@ def test_end_to_end_pipeline(tmp_path, make_pdf):
 def test_pipeline_missing_input_dir_raises(tmp_path, region_map):
     with pytest.raises(NotADirectoryError):
         run(tmp_path / "yok", tmp_path / "out", region_map)
-

@@ -1,4 +1,4 @@
-"""Irsaliye metninden alan cikarimi.
+﻿"""Irsaliye metninden alan cikarimi.
 
 Bir dosya = bir irsaliye oldugu icin belge sinir tespiti gerekmez. Her dosya
 icin PVS kodu, belge numarasi ve SEVK (teslimat) adresi cikarilir. Zorunlu
@@ -20,6 +20,7 @@ bulunur.
 
 from __future__ import annotations
 
+from decimal import Decimal, InvalidOperation
 import re
 from dataclasses import dataclass, field
 from typing import Optional
@@ -33,6 +34,11 @@ PVS_RE = re.compile(r"PVS\d{4}\S*", re.IGNORECASE)
 BELGE_RE = re.compile(r"0700\d+")
 # Toplam koli adedi, orn: "Toplam Koli: 24"
 KOLI_RE = re.compile(r"Toplam\s*Koli\s*:?\s*(\d+)", re.IGNORECASE)
+# Toplam brut agirlik, orn: "Toplam Brüt Ağırlık: 1.234,50"
+BRUT_AGIRLIK_RE = re.compile(
+    r"toplam\s*brut\s*agirl(?:ik|igi)\s*:?\s*([0-9][0-9.,]*)",
+    re.IGNORECASE,
+)
 # Adres bloklarinin etiketleri.
 SEVK_LABEL_RE = re.compile(r"SEVK\s*ADRES[İI]", re.IGNORECASE)
 FATURA_LABEL_RE = re.compile(r"FATURA\s*ADRES[İI]", re.IGNORECASE)
@@ -63,6 +69,7 @@ class Document:
     address: Optional[str] = None
     recipient: Optional[str] = None
     koli: Optional[int] = None
+    brut_agirlik: Optional[Decimal] = None
     region: Optional[str] = None
     errors: list[str] = field(default_factory=list)
 
@@ -151,6 +158,28 @@ def extract_koli(text: str) -> Optional[int]:
     return int(m.group(1)) if m else None
 
 
+def _parse_decimal(value: str) -> Optional[Decimal]:
+    raw = value.strip().replace(" ", "")
+    if not raw:
+        return None
+    if "," in raw and "." in raw:
+        if raw.rfind(",") > raw.rfind("."):
+            raw = raw.replace(".", "").replace(",", ".")
+        else:
+            raw = raw.replace(",", "")
+    elif "," in raw:
+        raw = raw.replace(",", ".")
+    try:
+        return Decimal(raw)
+    except InvalidOperation:
+        return None
+
+
+def extract_brut_agirlik(text: str) -> Optional[Decimal]:
+    """'Toplam Brüt Ağırlık' degerini Decimal olarak dondurur; yoksa None."""
+    m = BRUT_AGIRLIK_RE.search(normalize(text))
+    return _parse_decimal(m.group(1)) if m else None
+
 def parse_document(path: str, text: str) -> Document:
     """Metinden bir Document olusturur; zorunlu alan eksikse hata ekler."""
     doc = Document(path=path, text=text)
@@ -175,5 +204,7 @@ def parse_document(path: str, text: str) -> Document:
 
     doc.recipient = extract_recipient(text)
     doc.koli = extract_koli(text)
+    doc.brut_agirlik = extract_brut_agirlik(text)
 
     return doc
+

@@ -169,6 +169,8 @@ def _parse_decimal(value: str) -> Optional[Decimal]:
             raw = raw.replace(",", "")
     elif "," in raw:
         raw = raw.replace(",", ".")
+    elif "." in raw:
+        raw = raw.split(".", 1)[0]
     try:
         return Decimal(raw)
     except InvalidOperation:

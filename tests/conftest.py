@@ -31,7 +31,7 @@ def make_irsaliye_pdf(
     addr_tail: str | None = None,
     vergi_dairesi: str = "BESIKTAS",
     koli: int | None = 10,
-    brut_agirlik: str | None = "100",
+    brut_agirlik: str | None = "100 kg",
     pages: int = 1,
     include_sevk: bool = True,
 ) -> Path:
@@ -93,4 +93,3 @@ def make_irsaliye_pdf(
 @pytest.fixture
 def make_pdf():
     return make_irsaliye_pdf
-

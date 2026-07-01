@@ -1,4 +1,4 @@
-"""Tum akisi orkestre eden pipeline.
+﻿"""Tum akisi orkestre eden pipeline.
 
 Gelen klasordeki her PDF -> metin cikar -> alanlari coz -> bolge tespit et
 -> bolgeye gore grupla -> bolge basina tek PDF + Hata PDF + raporlar.
@@ -10,6 +10,7 @@ from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from datetime import datetime
+from decimal import Decimal
 import os
 from pathlib import Path
 from typing import Callable, Optional
@@ -39,6 +40,11 @@ class PipelineResult:
 def _list_pdfs(input_dir: Path) -> list[Path]:
     return sorted(p for p in input_dir.iterdir() if p.suffix.lower() == ".pdf")
 
+
+def _format_kg(value: Decimal) -> str:
+    value = value.quantize(Decimal("0.01"))
+    text = format(value, "f").rstrip("0").rstrip(".")
+    return text or "0"
 
 def _process_one_document(path: Path, region_map: RegionMap) -> Document:
     try:
@@ -157,10 +163,14 @@ def run(
             doc_targets[id(doc)] = ("Hata", "Hata", "")
 
     written: dict[str, list[str]] = {}
-    # B2: her bolge -> "Bolge (N evrak)" / "Palet|Dökme (N evrak)".
+    # B2: her bolge -> "Bolge (N evrak, X kg)" / "Palet|Dökme (N evrak)".
     for region, buckets in grouped.items():
         region_total = sum(len(d) for d in buckets.values())
-        region_dir = out_dir / "B2" / f"{region} ({region_total} evrak)"
+        region_weight = sum(
+            (doc.brut_agirlik or Decimal("0") for docs in buckets.values() for doc in docs),
+            Decimal("0"),
+        )
+        region_dir = out_dir / "B2" / f"{region} ({region_total} evrak, {_format_kg(region_weight)} kg)"
         for bucket, docs in buckets.items():
             bucket_dir_name = f"{bucket} ({len(docs)} evrak)"
             files = copy_docs(docs, region_dir / bucket_dir_name)
@@ -197,3 +207,4 @@ def run(
         written_files=written,
         summary=summary,
     )
+

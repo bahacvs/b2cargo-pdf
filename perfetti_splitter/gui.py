@@ -336,7 +336,7 @@ def main() -> int:
     }
     folder_var = ctk.StringVar(value=str(default_input_dir()))
     name_var = ctk.StringVar(value="")
-    progress_pct = {"v": 0}
+    progress_pct = {"v": 0, "drawn": -1}
     nav_buttons: dict[str, ctk.CTkButton] = {}
     view_frames: dict[str, ctk.CTkFrame] = {}
 
@@ -1029,6 +1029,7 @@ def main() -> int:
             bar_lbl = ctk.CTkLabel(box, image=ck, text="")
             bar_lbl.grid(row=2, column=0)
             islem_refs["progress_label"] = bar_lbl
+            progress_pct["drawn"] = progress_pct["v"]
             pct_lbl = ctk.CTkLabel(box, text=f"%{progress_pct['v']} · adres okunuyor & bölge eşleştiriliyor", text_color=c["muted"], font=mono_font(12))
             pct_lbl.grid(row=3, column=0, pady=(11, 44))
             islem_refs["progress_pct_label"] = pct_lbl
@@ -1245,16 +1246,23 @@ def main() -> int:
     def update_progress(done: int, total: int, _filename: str) -> None:
         ratio = round((done / total) * 100) if total else 0
         progress_pct["v"] = ratio
-        lbl = islem_refs.get("progress_label")
         pct_lbl = islem_refs.get("progress_pct_label")
+        if pct_lbl is not None:
+            pct_lbl.configure(text=f"%{ratio} · adres okunuyor & bölge eşleştiriliyor ({done}/{total})")
+        # Metin (islenen/toplam) her belgede guncellenir ama gradyan resmi
+        # -pahali piksel-piksel uretim- yalnizca gorunen yuzde gercekten
+        # degistiginde yeniden cizilir; buyuk/hizli vardiyalarda ana thread'i
+        # gereksiz yere mesgul etmemek icin.
+        if ratio == progress_pct.get("drawn"):
+            return
+        progress_pct["drawn"] = ratio
+        lbl = islem_refs.get("progress_label")
         if lbl is not None:
             bar_w, bar_h = 560, 13
             img = progress_image(bar_w, bar_h, ratio, C())
             ck = ctk.CTkImage(light_image=img, dark_image=img, size=(bar_w, bar_h))
             lbl.configure(image=ck)
             lbl.image = ck
-        if pct_lbl is not None:
-            pct_lbl.configure(text=f"%{ratio} · adres okunuyor & bölge eşleştiriliyor ({done}/{total})")
 
     def on_done(result: PipelineResult | None, error: Exception | None) -> None:
         if error is not None:

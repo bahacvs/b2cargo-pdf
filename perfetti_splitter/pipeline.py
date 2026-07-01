@@ -59,13 +59,19 @@ def _process_one_document(path: Path, region_map: RegionMap) -> Document:
         doc.errors.append(f"PDF okunamadı: {exc}")
         return doc
 
-    doc = parse_document(str(path), text)
-    if doc.ok:  # zorunlu alanlar tamam -> bolge dene
-        region, err = region_map.detect(doc.address)
-        if err:
-            doc.errors.append(err)
-        else:
-            doc.region = region
+    try:
+        doc = parse_document(str(path), text)
+        if doc.ok:  # zorunlu alanlar tamam -> bolge dene
+            region, err = region_map.detect(doc.address)
+            if err:
+                doc.errors.append(err)
+            else:
+                doc.region = region
+    except Exception as exc:  # beklenmeyen ayristirma hatasi -> bu belge Hata'ya
+        # dussun; tek belgedeki beklenmeyen bir hata butun vardiyanin
+        # sonucunu (o ana kadar islenmis diger belgeler dahil) silmemeli.
+        doc = Document(path=str(path))
+        doc.errors.append(f"Belge işlenemedi: {exc}")
     return doc
 
 

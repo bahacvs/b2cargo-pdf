@@ -13,3 +13,9 @@ workdir/Islenen/*
 workdir/Hata/*
 workdir/Birlesik_PDF/*
 !workdir/**/.gitkeep
+
+# Kaynaktan calistirinca base_dir()'de olusan giris/cikti klasorleri ve
+# kullanicinin acik/koyu tema tercihi (gui.py: ui_settings_path()).
+/Gelen_PDF/
+/Birlesik_PDF/
+/ui_ayar.json

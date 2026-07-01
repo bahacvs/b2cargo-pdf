@@ -35,6 +35,11 @@ class PipelineResult:
     error_count: int = 0
     written_files: dict[str, list[str]] = field(default_factory=dict)
     summary: str = ""
+    # id(document) -> (durum, hedef, kova); rapor yazımıyla aynı eşleme
+    # (bkz. report.write_shift_report). Arayüzün sonuç ekranlarını (Özet /
+    # Bölgeler / Hata) gerçek ayırma kararlarına, mantığı tekrar etmeden
+    # bağlayabilmesi için dışa açılır.
+    targets: dict[int, report.TargetInfo] = field(default_factory=dict)
 
 
 def _list_pdfs(input_dir: Path) -> list[Path]:
@@ -206,4 +211,5 @@ def run(
         error_count=len(error_docs),
         written_files=written,
         summary=summary,
+        targets=doc_targets,
     )

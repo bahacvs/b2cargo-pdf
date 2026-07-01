@@ -41,6 +41,9 @@ jobs:
           --add-data "config/regions.yaml;config"
           --add-data "config/dsv_lokasyonlar.yaml;config"
           --add-data "assets/app.ico;assets"
+          --add-data "assets/fonts;assets/fonts"
+          --add-data "assets/logo-mark.png;assets"
+          --add-data "assets/logo-wordmark.png;assets"
           launch_gui.py
 
       - name: Dagitim klasoru hazirla

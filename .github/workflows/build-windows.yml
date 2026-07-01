@@ -1,5 +1,5 @@
 name: Windows EXE Derle
-# Rebuild marker: 2026-07-01 gross-weight-folders
+# Rebuild marker: 2026-07-01 gross-weight-folders-retry
 
 # Teknik olmayan kullanici icin tek dosya .exe uretir.
 # Tetik: bu dosya main'e her yazildiginda calisir ve KODU feature branch'ten

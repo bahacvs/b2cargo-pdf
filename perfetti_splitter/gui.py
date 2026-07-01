@@ -649,6 +649,12 @@ def main() -> int:
     }
 
     def set_view(name: str) -> None:
+        # Onceki vardiya bittikten sonra Islem sekmesine donmek, yeni bir
+        # ayirma icin hazir (bosta) ekrani gostermeli; eski "tamamlandi"
+        # karti sonsuza kadar kalmamali.
+        if name == "islem" and state["phase"] == "done":
+            state["phase"] = "idle"
+            render_islem_state()
         state["tab"] = name
         c = C()
         crumb_var.set(TITLES[name][0])
@@ -780,6 +786,13 @@ def main() -> int:
         actions.grid(row=0, column=1, rowspan=2, sticky="e")
         has_result = state["result"] is not None
         has_error = has_result and state["result"].error_count > 0
+        if has_result:
+            btn_new = ctk.CTkButton(
+                actions, text="Yeni Ayır", image=icon_islem("white"), compound="left", height=36,
+                fg_color=c["brand2"], hover_color=c["brand2_hover"], text_color="white",
+                font=font(12, "bold"), corner_radius=10, command=start_new_run,
+            )
+            btn_new.pack(side="left", padx=(0, 8))
         btn_region = secondary_button(actions, "Bölge Ayarları", icon_gear(c["fg"]), open_region_settings)
         btn_region.pack(side="left", padx=(0, 8))
         btn_report = secondary_button(actions, "Vardiya Raporu", icon_list(c["fg"]), open_shift_report, state="normal" if has_result else "disabled")
@@ -1051,8 +1064,10 @@ def main() -> int:
                 box, text=f"{total} evrak · {region_n} bölge · {err_n} hata · {out_dir}",
                 text_color=c["muted"], font=font(13),
             ).grid(row=2, column=0, padx=20, pady=(0, 18))
-            go_btn = primary_button(box, "Özete git →", command=lambda: set_view("ozet"))
-            go_btn.grid(row=3, column=0, pady=(0, 34))
+            done_actions = ctk.CTkFrame(box, fg_color="transparent")
+            done_actions.grid(row=3, column=0, pady=(0, 34))
+            secondary_button(done_actions, "Yeni Ayır", icon_islem(c["fg"]), start_new_run).pack(side="left", padx=(0, 8))
+            primary_button(done_actions, "Özete git →", command=lambda: set_view("ozet")).pack(side="left")
 
     # ------------------------------------------------------------------ #
     # Ozet / Bolgeler / Hata (gercek sonuca gore doldurulur)
@@ -1317,6 +1332,15 @@ def main() -> int:
         folder_var.set(str(hata_dir))
         name_var.set(f"Hata_tekrar_{datetime.now().strftime('%H%M%S')}")
         start()
+
+    def start_new_run() -> None:
+        """Onceki sonucu (Ozet/Bolgeler/Hata) korur; Islem'i bosta ekrana
+        dondurup yeni bir vardiya icin hazirlar."""
+        state["phase"] = "idle"
+        folder_var.set(str(default_input_dir()))
+        name_var.set("")
+        render_islem_state()
+        set_view("islem")
 
     build()
     root.mainloop()

@@ -64,6 +64,16 @@ def default_output_dir() -> Path:
     return base_dir() / "Birlesik_PDF"
 
 
+def dated_shift_name(shift_name: str | None) -> str:
+    """Vardiya adinin sonuna 'GG.AA.YYYY' bugunun tarihini ekler.
+
+    Ad girilmemisse "Vardiya" koku kullanilir; boylece Birlesik_PDF altindaki
+    her klasor, adi ne olursa olsun, olusturuldugu gunu tasir.
+    """
+    base = (shift_name or "").strip() or "Vardiya"
+    return f"{base} {datetime.now():%d.%m.%Y}"
+
+
 def run_split(
     input_dir: str | Path,
     shift_name: str | None = None,
@@ -71,14 +81,25 @@ def run_split(
 ) -> PipelineResult:
     region_map = RegionMap.from_yaml(str(config_path()))
     dsv = DsvMatcher.from_yaml(str(dsv_path())) if dsv_path().exists() else None
-    return run(
+    input_dir = Path(input_dir)
+    pdf_paths = [p for p in input_dir.iterdir() if p.suffix.lower() == ".pdf"]
+    result = run(
         input_dir,
         default_output_dir(),
         region_map,
-        shift_name=shift_name,
+        shift_name=dated_shift_name(shift_name),
         dsv_matcher=dsv,
         progress_callback=progress_callback,
     )
+    # Basariyla islenen PDF'ler cikti klasorlerine kopyalandi (Hata dahil);
+    # Gelen_PDF'i bosaltarak kullaniciyi bir sonraki vardiyadan once elle
+    # silme isinden kurtarir.
+    for path in pdf_paths:
+        try:
+            path.unlink()
+        except OSError:
+            pass
+    return result
 
 
 def open_in_explorer(path: str | Path) -> None:
